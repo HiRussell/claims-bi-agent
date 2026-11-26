@@ -7,7 +7,10 @@ and list every rule you relied on in `assumptions`.
 - `claim_latest` is the default source for every claim measure. It has ONE row per claim: the most recently
   loaded version of the claim (claims are edited after loading, so the raw `claim` table holds several rows
   per claim and overcounts). It already carries SGD amounts and provider / doctor attributes.
-- The raw `claim` table is only for questions about load history or versions.
+- The raw `claim` table is only for questions about load history or versions (when a claim was loaded, how
+  often it was edited, what an earlier version said). Those are not claim measures: unless the question says
+  otherwise they cover all claims regardless of status, and a claim's history is every row with its
+  `claim_id`, including rows loaded outside the period asked about. Say so in `assumptions`.
 - `claim_icd` has one row per (claim, diagnosis). Join it to `claim_latest` on `claim_id`.
 - Never join the raw `lookup` table (it has repeated rows that multiply results). Decoded names are already
   in `claim_latest`, `provider_dim`, `doctor_dim`, `drug_dim`.
@@ -39,6 +42,9 @@ and list every rule you relied on in `assumptions`.
 - `approved_on`, `rejected_on`, `voided_on` and `loaded_at` are timestamps with a time of day. If a question
   explicitly asks about one of these dates, compare the day: `CAST(rejected_on AS DATE) BETWEEN ... AND ...`.
   Comparing the timestamp itself with `<= DATE '...'` silently loses the last day.
+- "Days between" two events means calendar days: `date_diff('day', visit_date, CAST(approved_on AS DATE))`.
+  "More than 3 days after" means at least 4 calendar days later; never let the time of day decide it.
+- "Last N quarters" are complete calendar quarters (see the date windows), not the last 3N months.
 - Report months as `YYYY-MM` (column `visit_month`). In a monthly breakdown, a month with no claims should
   still be mentioned in the answer text.
 
@@ -46,12 +52,17 @@ and list every rule you relied on in `assumptions`.
 - Groups must add up to the total. `claim_latest` labels missing attribution as `'Unknown'` (provider_name,
   provider_type, country_code, region, doctor_name, specialty, visit_type). Keep the Unknown group as a row;
   never filter it out silently.
+- A figure "per X", "by X" or "in each X" (a total, an average, a median, the largest or smallest claim) is
+  a breakdown: `Unknown` stays in it as a row, even though it is not a real country, region or provider.
+- `Unknown` is a bucket of claims that could not be attributed, never an entity. Do not count it as a
+  provider, doctor or country ("how many providers", "claims per provider", "active providers"): leave it
+  out of both sides of such a figure and say how many claims that leaves out.
 - For "top N" and "which is highest" questions: rank the named groups, leave `Unknown` out of the ranking,
   and say in the answer and in `assumptions` how many claims / how much amount sit in Unknown. Get the
   Unknown figure with its own query and list that query too (a second table); do not repeat it as extra
   columns on every row, and do not CROSS JOIN to it (the result is empty when there is no Unknown group).
-- Country comes from the provider (`country_code`: SG = Singapore, MY = Malaysia, ID = Indonesia,
-  VN = Vietnam). Never infer country from the currency.
+- Country comes from the provider (`country_code`, an ISO two-letter code, for example SG = Singapore).
+  Never infer country from the currency.
 - The raw provider table lists some providers twice under different ids. `provider_dim` and `claim_latest`
   merge them: count providers in `provider_dim`, group claims by `provider_id` and show `provider_name`.
 - Doctors: the same applies to a doctor entered twice under different spellings (merged in `doctor_dim` and

@@ -173,10 +173,14 @@ class DateWindows(unittest.TestCase):
         self.assertEqual(w["last_month"], {"from": "2026-10-01", "to": "2026-10-31"})
         self.assertEqual(w["last_quarter"], {"from": "2026-07-01", "to": "2026-09-30"})
         self.assertEqual(w["last_12_months"], {"from": "2025-11-01", "to": "2026-10-31"})
+        self.assertEqual(w["quarter_before_last"], {"from": "2026-04-01", "to": "2026-06-30"})
+        self.assertEqual(w["last_2_quarters"], {"from": "2026-04-01", "to": "2026-09-30"})
+        self.assertEqual(w["last_4_quarters"], {"from": "2025-10-01", "to": "2026-09-30"})
         w = agent.date_windows(dt.date(2027, 1, 15))                       # crosses a year boundary
         self.assertEqual(w["last_month"], {"from": "2026-12-01", "to": "2026-12-31"})
         self.assertEqual(w["last_quarter"], {"from": "2026-10-01", "to": "2026-12-31"})
         self.assertEqual(w["last_3_months"], {"from": "2026-10-01", "to": "2026-12-31"})
+        self.assertEqual(w["last_2_quarters"], {"from": "2026-07-01", "to": "2026-12-31"})
 
 
 class ModelSettings(unittest.TestCase):
@@ -202,7 +206,7 @@ class ModelSettings(unittest.TestCase):
     def test_only_the_standard_openai_key(self):
         c = self.client(OPENAI_API_KEY="test-key")
         self.assertEqual((c.api_key, c.model, c.style, c.effort, c.base_url),
-                         ("test-key", "gpt-6-luna", "responses", "low", "https://api.openai.com/v1"))
+                         ("test-key", "gpt-6-luna", "responses", "medium", "https://api.openai.com/v1"))
 
     def test_chat_style_on_openai_switches_reasoning_off(self):
         c = self.client(LLM_API_KEY="test-key", LLM_MODEL="gpt-6-luna", LLM_API_STYLE="chat")

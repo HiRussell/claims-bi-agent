@@ -42,7 +42,7 @@ VIEWS = [
         FROM lookup GROUP BY 1, 2""",
 
     # provider_id -> provider_key. The provider table holds the same provider more than once under a
-    # different id with a re-typed name ("Harbour Family Clinic 1" / "harbour family clinic 1."). Rows are
+    # different id with a re-typed name ("City Clinic" / "city clinic."). Rows are
     # merged only when the normalised name AND type, country and region all match; the smallest id is the key.
     """CREATE VIEW provider_map AS
         WITH p AS (
@@ -70,8 +70,8 @@ VIEWS = [
         LEFT JOIN lookup_clean r ON r.type = 'PROVIDER_REGION' AND r.code_key = {_code_key('g.region')}""",
 
     # doctor_id -> doctor_key. Doctors are people, and people share names: two doctors with the IDENTICAL name
-    # are kept apart. Two rows are merged only when the same name is typed differently ("Locum Doctor" /
-    # "Locum doctor") and the specialty matches, which is the signature of one doctor entered twice.
+    # are kept apart. Two rows are merged only when the same name is typed differently ("Dr A Tan" /
+    # "dr a tan") and the specialty matches, which is the signature of one doctor entered twice.
     """CREATE VIEW doctor_map AS
         WITH d AS (
             SELECT *, trim(regexp_replace(regexp_replace(lower(name), '[^a-z0-9 ]', '', 'g'), ' +', ' ', 'g')) AS name_key

@@ -94,6 +94,12 @@ def date_windows(as_of: dt.date) -> dict:
         "year_to_date": span(dt.date(as_of.year, 1, 1), as_of),
         "last_year": span(dt.date(as_of.year - 1, 1, 1), dt.date(as_of.year - 1, 12, 31)),
     }
+    windows["quarter_before_last"] = span(_shift_months(quarter_start, -6), _shift_months(quarter_start, -3) - day)
+    for n in (2, 3, 4):
+        windows[f"last_{n}_quarters"] = span(_shift_months(quarter_start, -3 * n), quarter_start - day)
+    windows["rule_for_last_N_quarters"] = (
+        "the N complete calendar quarters before the current quarter; the window always ends on "
+        f"{(quarter_start - day).isoformat()}. This is NOT the same as the last 3N months")
     for n in (3, 6, 12, 24):
         windows[f"last_{n}_months"] = span(_shift_months(month_start, -n), month_start - day)
     windows["rule_for_last_N_months"] = (
@@ -200,6 +206,7 @@ def build_catalogue(as_of: dt.date) -> dict:
     multi_dx = one("SELECT count(*) FROM (SELECT claim_id FROM claim_icd GROUP BY 1 HAVING count(*) > 1)")[0]
     provider_rows, providers = one("SELECT sum(source_rows), count(*) FROM provider_dim")
     doctor_rows, doctors = one("SELECT sum(source_rows), count(*) FROM doctor_dim")
+    shared_names = one("SELECT count(*) FROM (SELECT doctor_name FROM doctor_dim GROUP BY 1 HAVING count(*) > 1)")[0]
     lookup_conflicts = one("SELECT count(*) FROM lookup_clean WHERE descr_variants > 1")[0]
 
     facts = [
@@ -222,6 +229,10 @@ def build_catalogue(as_of: dt.date) -> dict:
                      "an existing doctor under another id with the name typed differently (same specialty). "
                      "doctor_dim and claim_latest merge them; say so in assumptions when you count or rank doctors. "
                      "Doctors with an identical name are different people and are NOT merged.")
+    if shared_names:
+        facts.append(f"{shared_names} doctor names each belong to more than one doctor (different people with the "
+                     "same name). For a question that names a doctor, report every matching doctor_id as its own "
+                     "row (or ask which one is meant); never add them into one figure.")
     if no_fx:
         facts.append(f"WARNING: {no_fx} claims have an unusable currency_rate, so claim_amt_sgd is NULL for them. "
                      "Report how many claims are missing from any SGD total.")

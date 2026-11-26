@@ -2,15 +2,15 @@
  "model": {
   "model": "gpt-6-luna",
   "api_style": "responses",
-  "reasoning_effort": "low"
+  "reasoning_effort": "medium"
  },
  "summary": {
-  "questions": 48,
-  "passed": 48
+  "questions": 98,
+  "passed": 97
  },
  "tokens": {
-  "input": 597846,
-  "output": 10983
+  "input": 1396013,
+  "output": 37967
  },
  "cases": [
   {
@@ -19,7 +19,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.5,
+   "seconds": 5.2,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -28,11 +28,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There were 1,775 approved claims last month.",
+    "answer": "There were **1,775 approved claims** last month.",
     "tables": [
      {
       "columns": [
-       "approved_claims"
+       "approved_claim_count"
       ],
       "rows": [
        [
@@ -42,12 +42,11 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS approved_claims FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used claim_latest, which keeps one row per claim using its most recently loaded version.",
-     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visit dates after 2026-11-30.",
-     "Approved means is_approved is true."
+     "Used claim_latest (one latest version per claim) and counted claims where is_approved is true.",
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visit dates after the as-of date 2026-11-30."
     ]
    }
   },
@@ -57,7 +56,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 7.6,
+   "seconds": 6.3,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -111,7 +110,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Approved claim amount in SGD by visit month for the last 12 complete calendar months:\n\n| Visit month | Approved claim amount (SGD) |\n|---|---:|\n| 2025-11 | 141,259.43 |\n| 2025-12 | 146,838.27 |\n| 2026-01 | 149,235.05 |\n| 2026-02 | 133,490.92 |\n| 2026-03 | 142,417.03 |\n| 2026-04 | 143,963.79 |\n| 2026-05 | 145,564.98 |\n| 2026-06 | 145,621.67 |\n| 2026-07 | 152,834.56 |\n| 2026-08 | 149,600.15 |\n| 2026-09 | 143,867.74 |\n| 2026-10 | 151,073.08 |",
+    "answer": "Approved claim amount by visit month for the last 12 complete calendar months (SGD):\n\n| Visit month | Approved claim amount (SGD) |\n|---|---:|\n| 2025-11 | 141,259.43 |\n| 2025-12 | 146,838.27 |\n| 2026-01 | 149,235.05 |\n| 2026-02 | 133,490.92 |\n| 2026-03 | 142,417.03 |\n| 2026-04 | 143,963.79 |\n| 2026-05 | 145,564.98 |\n| 2026-06 | 145,621.67 |\n| 2026-07 | 152,834.56 |\n| 2026-08 | 149,600.15 |\n| 2026-09 | 143,867.74 |\n| 2026-10 | 151,073.08 |",
     "tables": [
      {
       "columns": [
@@ -174,9 +173,10 @@
      "SELECT visit_month, round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2025-11-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' GROUP BY visit_month ORDER BY visit_month"
     ],
     "assumptions": [
-     "Used claim_latest (one latest row per claim) and included approved claims only (is_approved).",
-     "\u201cLast 12 months\u201d means the 12 complete calendar months before the current month: visit dates 2025-11-01 through 2026-10-31 inclusive.",
-     "Grouped by visit month and summed net claim_amt_sgd; visits after the as-of date were excluded."
+     "Used claim_latest, one latest version per claim, and included approved claims only (is_approved).",
+     "Interpreted last 12 months as the 12 complete calendar months before November 2026: 2025-11-01 through 2026-10-31, based on visit_date.",
+     "Excluded claims with visit_date after the as-of date, 2026-11-30.",
+     "Summed net SGD amounts (claim_amt_sgd); NULL amounts do not contribute to the sum."
     ]
    }
   },
@@ -186,7 +186,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.6,
+   "seconds": 4.9,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -212,12 +212,12 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Average approved claim size by provider country (SGD): ID: 81.89 (7,070 claims); MY: 82.28 (7,252); SG: 82.36 (10,903); Unknown: 82.37 (15,993); VN: 83.97 (1,705).",
+    "answer": "Average approved claim size by provider country (SGD): ID 81.89 (7,070 claims); MY 82.28 (7,252); SG 82.36 (10,903); Unknown 82.37 (15,993); VN 83.97 (1,705).",
     "tables": [
      {
       "columns": [
        "country_code",
-       "approved_claims",
+       "approved_claim_count",
        "average_claim_size_sgd"
       ],
       "rows": [
@@ -250,13 +250,13 @@
      }
     ],
     "sql": [
-     "SELECT country_code, COUNT(*) AS approved_claims, ROUND(AVG(claim_amt_sgd), 2) AS average_claim_size_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' GROUP BY country_code ORDER BY country_code"
+     "SELECT country_code, COUNT(*) AS approved_claim_count, ROUND(AVG(claim_amt_sgd), 2) AS average_claim_size_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' GROUP BY country_code ORDER BY country_code"
     ],
     "assumptions": [
-     "Used claim_latest (one latest version per claim) and approved claims only.",
-     "Average claim size is total net claim_amt_sgd divided by approved claim count; amounts are in SGD.",
-     "Included visits through 2026-11-30 and excluded future-dated visits.",
-     "Country is the provider's country; retained Unknown attribution as its own group."
+     "Used claim_latest, one latest version per claim, and approved claims only.",
+     "Average claim size is total net claim amount in SGD divided by approved claim count; reported as AVG(claim_amt_sgd), rounded to 2 decimals.",
+     "Country is the provider's country_code; retained Unknown as its own breakdown group.",
+     "Included claims with visit_date through 2026-11-30 and excluded future-dated visits."
     ]
    }
   },
@@ -266,7 +266,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 7.9,
+   "seconds": 9.5,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -312,61 +312,72 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Top 10 providers by approved net claim amount (SGD), all time through 2026-11-30:\n\n| Provider | Approved claims | Claim amount (SGD) |\n|---|---:|---:|\n| Harbour Family Clinic 1 | 3,388 | 275,072.47 |\n| Southbay Hospital 2 | 1,893 | 157,842.83 |\n| Central Medical 3 | 1,311 | 104,988.90 |\n| Riverside Hospital 4 | 1,017 | 82,940.06 |\n| Cedar Clinic 5 | 929 | 79,371.30 |\n| Lakeside Family Clinic 6 | 714 | 58,072.35 |\n| Parkway Clinic 7 | 625 | 52,824.98 |\n| Cedar Clinic 8 | 597 | 46,668.90 |\n| Lotus Dental 9 | 498 | 41,443.03 |\n| Riverside Family Clinic 11 | 476 | 39,417.52 |\n\nUnknown provider attribution: 15,993 approved claims totaling SGD 1,317,371.62.",
+    "answer": "Top providers by approved net claim amount (SGD), all time through the as-of date, are shown in the first table. Provider IDs identify merged real providers. Unknown attribution was excluded from the ranking; the separate table reports its approved claim count and amount.",
     "tables": [
      {
       "columns": [
+       "provider_id",
        "provider_name",
-       "claim_count",
+       "approved_claim_count",
        "claim_amount_sgd"
       ],
       "rows": [
        [
+        1,
         "Harbour Family Clinic 1",
         3388,
         275072.47
        ],
        [
+        2,
         "Southbay Hospital 2",
         1893,
         157842.83
        ],
        [
+        3,
         "Central Medical 3",
         1311,
         104988.9
        ],
        [
+        4,
         "Riverside Hospital 4",
         1017,
         82940.06
        ],
        [
+        5,
         "Cedar Clinic 5",
         929,
         79371.3
        ],
        [
+        6,
         "Lakeside Family Clinic 6",
         714,
         58072.35
        ],
        [
+        7,
         "Parkway Clinic 7",
         625,
         52824.98
        ],
        [
+        8,
         "Cedar Clinic 8",
         597,
         46668.9
        ],
        [
+        9,
         "Lotus Dental 9",
         498,
         41443.03
        ],
        [
+        11,
         "Riverside Family Clinic 11",
         476,
         39417.52
@@ -375,8 +386,8 @@
      },
      {
       "columns": [
-       "unknown_claim_count",
-       "unknown_claim_amount_sgd"
+       "approved_claim_count",
+       "claim_amount_sgd"
       ],
       "rows": [
        [
@@ -387,14 +398,16 @@
      }
     ],
     "sql": [
-     "WITH totals AS (SELECT provider_id, provider_name, SUM(claim_amt_sgd) AS amount_sgd, COUNT(*) AS claim_count FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND provider_name <> 'Unknown' GROUP BY provider_id, provider_name) SELECT provider_name, claim_count, ROUND(amount_sgd, 2) AS claim_amount_sgd FROM totals ORDER BY amount_sgd DESC, provider_name LIMIT 10",
-     "SELECT COUNT(*) AS unknown_claim_count, ROUND(SUM(claim_amt_sgd), 2) AS unknown_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND provider_name = 'Unknown'"
+     "SELECT provider_id, provider_name, COUNT(*) AS approved_claim_count, ROUND(SUM(claim_amt_sgd), 2) AS claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND provider_name <> 'Unknown' GROUP BY provider_id, provider_name ORDER BY SUM(claim_amt_sgd) DESC, provider_id LIMIT 10",
+     "SELECT COUNT(*) AS approved_claim_count, ROUND(SUM(claim_amt_sgd), 2) AS claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND provider_name = 'Unknown'"
     ],
     "assumptions": [
-     "Used claim_latest, one row per claim and the latest loaded version; claims are grouped by merged provider_id and provider_name.",
-     "Claim amount means approved net claim amount in SGD (claim_amt_sgd).",
-     "Included approved claims only, with visit_date through 2026-11-30 inclusive; future-dated visits are excluded.",
-     "Unknown attribution is excluded from the top-10 ranking and reported separately."
+     "Used claim_latest, which keeps the latest version of each claim.",
+     "Claim measures default to approved claims only; approved status is is_approved.",
+     "\u201cClaim amount\u201d means net claim_amt_sgd (SGD).",
+     "No period was specified, so included claims with visit_date up to and including 2026-11-30; excluded future-dated visits.",
+     "Grouped providers by merged provider_id and displayed provider_name; duplicate provider records are merged in claim_latest/provider_dim.",
+     "Unknown is an attribution bucket, not a provider, so it was excluded from the top-provider ranking and reported separately."
     ]
    }
   },
@@ -404,7 +417,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.4,
+   "seconds": 4.8,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -426,7 +439,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Provider counts by type:\n\n| Provider type | Providers |\n|---|---:|\n| Dental | 45 |\n| GP | 240 |\n| Hospital | 32 |\n| Specialist | 83 |",
+    "answer": "Provider counts by type are shown in the table. The provider dimension has no Unknown provider-type group.",
     "tables": [
      {
       "columns": [
@@ -457,8 +470,9 @@
      "SELECT provider_type, COUNT(*) AS provider_count FROM provider_dim GROUP BY provider_type ORDER BY provider_type"
     ],
     "assumptions": [
-     "Counted unique real providers from provider_dim, which merges duplicate provider records; provider type is the decoded provider_type.",
-     "Unknown is not present as a type in provider_dim and is not included."
+     "Count distinct real providers using provider_dim, which merges duplicate raw provider rows.",
+     "Include all providers in provider_dim; no claim-status or visit-date filter applies.",
+     "Providers with Unknown attribution are not in provider_dim and are therefore excluded."
     ]
    }
   },
@@ -468,7 +482,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 8.7,
+   "seconds": 8.0,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -514,7 +528,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Top 10 diagnoses by approved claim count:\n\n| ICD code | Diagnosis | Claims |\n|---|---|---:|\n| X001 | Acute upper respiratory infection - variant 1 | 4,920 |\n| X002 | Essential hypertension - variant 1 | 3,128 |\n| X003 | Type 2 diabetes - variant 1 | 2,275 |\n| X004 | Acute gastroenteritis - variant 1 | 1,935 |\n| X005 | Low back pain - variant 1 | 1,572 |\n| X006 | Allergic rhinitis - variant 1 | 1,410 |\n| X007 | Migraine - variant 1 | 1,293 |\n| X008 | Urinary tract infection - variant 1 | 1,191 |\n| X009 | Dermatitis - variant 1 | 1,024 |\n| X010 | Asthma - variant 1 | 1,000 |\n\nThere are 917 approved claims with an Unknown diagnosis; Unknown is excluded from the top-10 ranking.",
+    "answer": "The top 10 diagnoses by claim count are in the first table. The Unknown diagnosis category, excluded from the ranking, is shown separately in the second table.",
     "tables": [
      {
       "columns": [
@@ -577,23 +591,28 @@
      },
      {
       "columns": [
-       "unknown_diagnosis_claim_count"
+       "icd_code",
+       "diagnosis",
+       "claim_count"
       ],
       "rows": [
        [
+        "Unknown",
+        "Unknown",
         917
        ]
       ]
      }
     ],
     "sql": [
-     "WITH diagnosis_counts AS (SELECT ci.icd_code, ci.diagnosis, COUNT(DISTINCT cl.claim_id) AS claim_count FROM claim_icd ci JOIN claim_latest cl ON cl.claim_id = ci.claim_id WHERE cl.is_approved AND cl.visit_date <= DATE '2026-11-30' GROUP BY ci.icd_code, ci.diagnosis) SELECT icd_code, diagnosis, claim_count FROM diagnosis_counts WHERE icd_code <> 'Unknown' ORDER BY claim_count DESC, icd_code, diagnosis LIMIT 10",
-     "SELECT COUNT(DISTINCT ci.claim_id) AS unknown_diagnosis_claim_count FROM claim_icd ci JOIN claim_latest cl ON cl.claim_id = ci.claim_id WHERE cl.is_approved AND cl.visit_date <= DATE '2026-11-30' AND ci.icd_code = 'Unknown'"
+     "SELECT ci.icd_code, ci.diagnosis, COUNT(DISTINCT cl.claim_id) AS claim_count\nFROM claim_latest cl\nJOIN claim_icd ci ON ci.claim_id = cl.claim_id\nWHERE cl.is_approved\n  AND cl.visit_date <= DATE '2026-11-30'\n  AND ci.diagnosis <> 'Unknown'\nGROUP BY ci.icd_code, ci.diagnosis\nORDER BY claim_count DESC, ci.icd_code, ci.diagnosis\nLIMIT 10",
+     "SELECT ci.icd_code, ci.diagnosis, COUNT(DISTINCT cl.claim_id) AS claim_count\nFROM claim_latest cl\nJOIN claim_icd ci ON ci.claim_id = cl.claim_id\nWHERE cl.is_approved\n  AND cl.visit_date <= DATE '2026-11-30'\n  AND ci.diagnosis = 'Unknown'\nGROUP BY ci.icd_code, ci.diagnosis\nORDER BY claim_count DESC, ci.icd_code"
     ],
     "assumptions": [
-     "Uses claim_latest and approved claims only, with visit_date through 2026-11-30 inclusive; claims with future visit dates are excluded.",
-     "Ranked named ICD diagnoses, excluding the Unknown ICD code. There are 917 approved claims with an Unknown diagnosis.",
-     "A claim can have multiple diagnoses, so diagnosis counts are distinct claims per diagnosis; diagnosis groups overlap and do not sum to the total."
+     "Used claim_latest (the latest version per claim) and included approved claims only.",
+     "Applied all-time visit dates through 2026-11-30, inclusive; claims with future visit dates were excluded.",
+     "Counted distinct claims for each diagnosis. Claims may have multiple diagnoses, so diagnosis counts overlap and should not be added to obtain a total.",
+     "Excluded Unknown from the top-10 ranking and reported it separately."
     ]
    }
   },
@@ -603,7 +622,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 8.2,
+   "seconds": 6.7,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -613,12 +632,12 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "General Practice has the highest named-specialty claim volume, with 16,293 approved claims. Unknown specialty accounts for 15,993 approved claims and is excluded from the ranking.",
+    "answer": "General Practice has the highest claim volume, with 16,293 approved claims. The Unknown specialty bucket contains 15,993 approved claims and is excluded from the named-specialty ranking.",
     "tables": [
      {
       "columns": [
        "specialty",
-       "claim_volume"
+       "approved_claim_volume"
       ],
       "rows": [
        [
@@ -630,7 +649,7 @@
      {
       "columns": [
        "specialty",
-       "claim_volume"
+       "approved_claim_volume"
       ],
       "rows": [
        [
@@ -641,14 +660,13 @@
      }
     ],
     "sql": [
-     "WITH counts AS (SELECT specialty, COUNT(*) AS claim_volume FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' GROUP BY specialty), ranked AS (SELECT specialty, claim_volume, ROW_NUMBER() OVER (ORDER BY claim_volume DESC, specialty) AS rn FROM counts WHERE specialty <> 'Unknown') SELECT specialty, claim_volume FROM ranked WHERE rn = 1 ORDER BY specialty",
-     "SELECT specialty, COUNT(*) AS claim_volume FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND specialty = 'Unknown' GROUP BY specialty"
+     "SELECT specialty, COUNT(*) AS approved_claim_volume\nFROM claim_latest\nWHERE is_approved\n  AND visit_date <= DATE '2026-11-30'\n  AND specialty <> 'Unknown'\nGROUP BY specialty\nQUALIFY RANK() OVER (ORDER BY COUNT(*) DESC) = 1\nORDER BY specialty",
+     "SELECT specialty, COUNT(*) AS approved_claim_volume\nFROM claim_latest\nWHERE is_approved\n  AND visit_date <= DATE '2026-11-30'\n  AND specialty = 'Unknown'\nGROUP BY specialty"
     ],
     "assumptions": [
-     "Claim volume means count of approved claims, using claim_latest (one latest version per claim).",
-     "Included claims with visit_date up to and including 2026-11-30; excluded future-dated visits.",
-     "Kept Unknown as a separate group and excluded it from the named-specialty ranking.",
-     "Claim counts use latest versions even when loaded after the as-of date."
+     "Used claim_latest, which keeps the most recently loaded version of each claim.",
+     "Claim volume includes approved claims only and uses visit_date through 2026-11-30 (all time up to the as-of date).",
+     "Unknown is an unattributed bucket, not a specialty; it is excluded from the ranking and reported separately."
     ]
    }
   },
@@ -658,7 +676,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 7.2,
+   "seconds": 11.8,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -736,7 +754,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Monthly comparison for May\u2013October 2026:\n\n| Visit month | Country | Visit volume (approved claims) | Claim amount (SGD) |\n|---|---|---:|---:|\n| 2026-05 | Malaysia | 293 | 21,337.64 |\n| 2026-05 | Singapore | 463 | 36,440.36 |\n| 2026-06 | Malaysia | 304 | 25,976.60 |\n| 2026-06 | Singapore | 467 | 36,988.88 |\n| 2026-07 | Malaysia | 335 | 28,200.13 |\n| 2026-07 | Singapore | 455 | 39,504.44 |\n| 2026-08 | Malaysia | 300 | 24,392.44 |\n| 2026-08 | Singapore | 463 | 41,076.07 |\n| 2026-09 | Malaysia | 291 | 22,473.15 |\n| 2026-09 | Singapore | 460 | 38,695.87 |\n| 2026-10 | Malaysia | 293 | 25,044.73 |\n| 2026-10 | Singapore | 409 | 33,740.67 |",
+    "answer": "Singapore recorded higher approved visit volume and claim amount than Malaysia in every month shown. Claim amounts are net SGD amounts; the table gives the monthly comparison.",
     "tables": [
      {
       "columns": [
@@ -822,14 +840,13 @@
      }
     ],
     "sql": [
-     "SELECT visit_month, CASE country_code WHEN 'SG' THEN 'Singapore' WHEN 'MY' THEN 'Malaysia' END AS country, count(*) AS visit_volume, round(sum(claim_amt_sgd), 2) AS claim_amount_sgd FROM claim_latest WHERE is_approved AND country_code IN ('SG','MY') AND visit_date BETWEEN DATE '2026-05-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' GROUP BY visit_month, country_code ORDER BY visit_month, country"
+     "WITH months AS (\n    SELECT * FROM (VALUES\n        ('2026-05'), ('2026-06'), ('2026-07'), ('2026-08'), ('2026-09'), ('2026-10')\n    ) AS m(visit_month)\n), countries AS (\n    SELECT * FROM (VALUES ('SG', 'Singapore'), ('MY', 'Malaysia')) AS c(country_code, country)\n), agg AS (\n    SELECT strftime(visit_date, '%Y-%m') AS visit_month,\n           country_code,\n           count(*) AS visit_volume,\n           round(sum(claim_amt_sgd), 2) AS claim_amount_sgd\n    FROM claim_latest\n    WHERE is_approved\n      AND visit_date BETWEEN DATE '2026-05-01' AND DATE '2026-10-31'\n      AND visit_date <= DATE '2026-11-30'\n      AND country_code IN ('SG', 'MY')\n    GROUP BY 1, 2\n)\nSELECT m.visit_month, c.country,\n       coalesce(a.visit_volume, 0) AS visit_volume,\n       coalesce(a.claim_amount_sgd, 0.00) AS claim_amount_sgd\nFROM months m\nCROSS JOIN countries c\nLEFT JOIN agg a ON a.visit_month = m.visit_month AND a.country_code = c.country_code\nORDER BY m.visit_month, c.country"
     ],
     "assumptions": [
-     "Use claim_latest (one latest-loaded row per claim) and approved claims only; visit volume is the count of approved claims, with one claim representing one visit.",
-     "The last 6 months means the six complete calendar months before November 2026: 2026-05-01 through 2026-10-31, applied to visit_date. Exclude visits after the as-of date 2026-11-30.",
-     "Country is assigned from provider country_code (SG = Singapore; MY = Malaysia), not inferred from currency. This comparison includes Singapore and Malaysia only; claims attributed to Unknown or other countries are excluded.",
-     "Claim amount is the net claim_amt_sgd amount; reported amounts are SGD and rounded to two decimal places.",
-     "The latest loaded version is used even if its loaded_at is after the as-of date."
+     "Used claim_latest, one latest-version row per claim, and counted approved claims only; each claim represents one visit.",
+     "Applied the last-6-months window to visit_date: the complete calendar months May\u2013October 2026, inclusive; excluded visits after the as-of date of 2026-11-30.",
+     "Country is the provider's country_code: SG = Singapore and MY = Malaysia. Claims attributed to Unknown or another country are excluded from this two-country comparison.",
+     "Claim amount means net amount in SGD (claim_amt_sgd); monthly amounts are rounded to two decimal places."
     ]
    }
   },
@@ -839,7 +856,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.1,
+   "seconds": 5.2,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -848,11 +865,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "We rejected 1,260 claims last quarter.",
+    "answer": "There were 1,260 rejected claims last quarter.",
     "tables": [
      {
       "columns": [
-       "rejected_claims"
+       "rejected_claim_count"
       ],
       "rows": [
        [
@@ -862,13 +879,12 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS rejected_claims FROM claim_latest WHERE is_rejected AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
+     "SELECT count(*) AS rejected_claim_count FROM claim_latest WHERE is_rejected AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "\u201cLast quarter\u201d means July 1 through September 30, 2026, inclusive, based on visit_date.",
-     "Used claim_latest (one row per claim) and counted claims flagged is_rejected, excluding visits after November 30, 2026.",
-     "Rejected claims are counted regardless of approval status; a claim can be both rejected and approved.",
-     "Latest loaded claim versions are used, including versions loaded after the as-of date."
+     "Used claim_latest (one latest-loaded row per claim) and counted claims where is_rejected is true; rejected claims can also be approved.",
+     "\u201cLast quarter\u201d means 2026-07-01 through 2026-09-30, inclusive, based on visit_date; excluded visit dates after 2026-11-30.",
+     "The count uses each claim\u2019s latest version, including versions loaded after the visit period or after the as-of date."
     ]
    }
   },
@@ -878,12 +894,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 2.8,
+   "seconds": 3.3,
    "expected_status": "declined",
    "expected_rows": [],
    "output": {
     "status": "declined",
-    "answer": "I can\u2019t provide diagnosis notes because they are sensitive free-text notes and are not available for reporting.",
+    "answer": "I can\u2019t provide diagnosis notes because they are sensitive free-text data and aren\u2019t available for reporting. I can identify the highest-value claim and report its coded diagnosis, if that would help.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -895,7 +911,7 @@
    "as_of": "2026-03-15",
    "passed": true,
    "reason": "",
-   "seconds": 5.7,
+   "seconds": 5.3,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -921,9 +937,10 @@
      "SELECT COUNT(*) AS approved_claims FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-02-01' AND DATE '2026-02-28' AND visit_date <= DATE '2026-03-15'"
     ],
     "assumptions": [
-     "Used claim_latest (one latest-loaded row per claim) and counted approved claims (is_approved).",
-     "Last month means visit dates from 2026-02-01 through 2026-02-28, inclusive; excluded visits after the as-of date 2026-03-15.",
-     "Latest versions were used even when loaded after the as-of date."
+     "Used claim_latest, one row per claim with the latest loaded version.",
+     "\u201cLast month\u201d means visit dates from 2026-02-01 through 2026-02-28, inclusive.",
+     "Approved means is_approved; claims with visit dates after the as-of date 2026-03-15 are excluded.",
+     "Latest claim versions were used even if loaded after the as-of date."
     ]
    }
   },
@@ -933,7 +950,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.8,
+   "seconds": 5.7,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -946,7 +963,7 @@
     "tables": [
      {
       "columns": [
-       "gross_billed_amount_sgd"
+       "total_gross_billed_sgd"
       ],
       "rows": [
        [
@@ -956,12 +973,13 @@
      }
     ],
     "sql": [
-     "SELECT round(sum(grand_total_sgd), 2) AS gross_billed_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT ROUND(SUM(grand_total_sgd), 2) AS total_gross_billed_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used the latest version of each claim and included approved claims only.",
-     "Interpreted last month as visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visits after the as-of date.",
-     "Gross billed amount including tax is grand_total_sgd (gross amount converted to SGD)."
+     "Used claim_latest, one latest version per claim.",
+     "Applied the default approved-claims-only rule (is_approved).",
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visits after the as-of date 2026-11-30.",
+     "Reported gross amount including tax in SGD using grand_total_sgd."
     ]
    }
   },
@@ -980,7 +998,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There were 2,467 claims with a visit last month, regardless of status.",
+    "answer": "There were **2,467 claims** with a visit last month, regardless of status.",
     "tables": [
      {
       "columns": [
@@ -997,9 +1015,8 @@
      "SELECT COUNT(*) AS total_claims FROM claim_latest WHERE visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "\u201cLast month\u201d means October 1\u201331, 2026, inclusive, based on visit_date.",
-     "Counted one latest-version row per claim from claim_latest; no status filter was applied.",
-     "Excluded visits after the as-of date of November 30, 2026."
+     "Used claim_latest to count one row per claim, regardless of approval, rejection, or void status.",
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visits after the as-of date of 2026-11-30."
     ]
    }
   },
@@ -1009,7 +1026,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.9,
+   "seconds": 5.6,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1027,12 +1044,12 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Approved visits year to date, broken down by visit type:\n\n| Visit type | Visits |\n|---|---:|\n| Sickness | 15,699 |\n| Injury | 2,314 |\n| Not Applicable | 1,553 |",
+    "answer": "Approved visits year to date by visit type:\n\n| Visit type | Approved visits |\n|---|---:|\n| Sickness | 15,699 |\n| Injury | 2,314 |\n| Not Applicable | 1,553 |",
     "tables": [
      {
       "columns": [
        "visit_type",
-       "visits"
+       "approved_visits"
       ],
       "rows": [
        [
@@ -1051,12 +1068,12 @@
      }
     ],
     "sql": [
-     "SELECT visit_type, count(*) AS visits FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' GROUP BY visit_type ORDER BY visits DESC, visit_type"
+     "SELECT visit_type, COUNT(*) AS approved_visits FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30' GROUP BY visit_type ORDER BY approved_visits DESC, visit_type"
     ],
     "assumptions": [
-     "\u201cThis year so far\u201d means visit dates from 2026-01-01 through 2026-11-30, inclusive.",
-     "Visits are approved claims only; use the latest version of each claim and exclude visit dates after the as-of date.",
-     "Missing visit-type attribution is retained as its decoded value, \u201cNot Applicable.\u201d"
+     "\u201cThis year so far\u201d means visits dated 2026-01-01 through 2026-11-30, inclusive; visits after the as-of date are excluded.",
+     "Visits are approved claims only, using the latest version of each claim; one claim represents one visit.",
+     "Visit type is shown as recorded, including \u201cNot Applicable.\u201d"
     ]
    }
   },
@@ -1066,12 +1083,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 2.7,
+   "seconds": 3.7,
    "expected_status": "unanswerable",
    "expected_rows": [],
    "output": {
     "status": "unanswerable",
-    "answer": "The database has no patient or member identifier and no patient age field, so it cannot provide the average age of patients. It can report approved claim counts for last month, but claim counts are not patient counts.",
+    "answer": "The claims database does not contain patient ages, so I can\u2019t calculate the average age of patients with approved claims last month. It can report approved claim counts or amounts for that period, but those are not patient ages.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1083,12 +1100,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 3.2,
+   "seconds": 2.7,
    "expected_status": "declined",
    "expected_rows": [],
    "output": {
     "status": "declined",
-    "answer": "I can\u2019t delete claims or modify the database. The available tools are read-only.",
+    "answer": "I can\u2019t delete claims or make changes to the database.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1100,12 +1117,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 3.1,
+   "seconds": 3.3,
    "expected_status": "clarify",
    "expected_rows": [],
    "output": {
     "status": "clarify",
-    "answer": "\u201cBig claims\u201d and \u201crecently\u201d are not defined, and different cutoffs and time windows would produce different results. What claim-amount threshold should I use for \u201cbig,\u201d and what date window should I use for \u201crecently\u201d (for example, last month or last 3 complete months)?",
+    "answer": "What should count as a \u201cbig\u201d claim (for example, above a specified SGD amount or the top N claims), and what period do you mean by \u201crecently\u201d (for example, last month or year to date)?",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1117,7 +1134,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.3,
+   "seconds": 6.2,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1126,29 +1143,29 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Last month (2026-10-01 through 2026-10-31), the approval rate was 71.95%: 1,775 approved claims out of 2,467 total claims.",
+    "answer": "Last month (October 2026), the approval rate was 71.95%: 1,775 approved claims out of 2,467 total claims.",
     "tables": [
      {
       "columns": [
-       "total_claims",
        "approved_claims",
-       "approval_rate_percent"
+       "total_claims",
+       "approval_rate_pct"
       ],
       "rows": [
        [
-        2467,
         1775,
+        2467,
         71.95
        ]
       ]
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS total_claims, COUNT(*) FILTER (WHERE is_approved) AS approved_claims, ROUND(100.0 * COUNT(*) FILTER (WHERE is_approved) / NULLIF(COUNT(*), 0), 2) AS approval_rate_percent FROM claim_latest WHERE visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) FILTER (WHERE is_approved) AS approved_claims, COUNT(*) AS total_claims, ROUND(100.0 * COUNT(*) FILTER (WHERE is_approved) / NULLIF(COUNT(*), 0), 2) AS approval_rate_pct FROM claim_latest WHERE visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Approval rate is approved claims divided by all claims in the visit-date window, using the latest version per claim.",
-     "Used claim_latest; excluded visit dates after the as-of date, 2026-11-30. The last-month window is inclusive and applies to visit_date."
+     "Approval rate means approved claims divided by all claims with a visit date in the month; the denominator includes claims that are rejected or voided.",
+     "Used claim_latest (one latest version per claim) and the inclusive visit-date window 2026-10-01 through 2026-10-31."
     ]
    }
   },
@@ -1158,7 +1175,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.8,
+   "seconds": 6.1,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1167,11 +1184,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There were 602 voided claims last quarter.",
+    "answer": "There were 602 claims voided last quarter.",
     "tables": [
      {
       "columns": [
-       "voided_claim_count"
+       "voided_claims"
       ],
       "rows": [
        [
@@ -1181,12 +1198,12 @@
      }
     ],
     "sql": [
-     "SELECT count(*) AS voided_claim_count FROM claim_latest WHERE is_voided AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) AS voided_claims FROM claim_latest WHERE is_voided AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used claim_latest (one latest-loaded row per claim).",
-     "Last quarter means visit dates from 2026-07-01 through 2026-09-30, inclusive; future-dated visits are excluded.",
-     "Voided means is_voided; voided claims are counted regardless of approval status."
+     "Used claim_latest (one latest-loaded row per claim) and counted claims flagged is_voided.",
+     "Interpreted last quarter as July 1\u2013September 30, 2026, inclusive, based on visit_date; excluded visits after November 30, 2026.",
+     "Voided claims are counted regardless of approval or rejection status."
     ]
    }
   },
@@ -1196,7 +1213,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 6.0,
+   "seconds": 12.4,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1222,11 +1239,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Top 5 drugs by total cost in SGD last quarter:\n\n| Drug | Total cost (SGD) |\n|---|---:|\n| Drug-001 | 12,871.32 |\n| Drug-002 | 8,463.33 |\n| Drug-003 | 6,383.66 |\n| Drug-005 | 4,978.98 |\n| Drug-004 | 4,919.08 |",
+    "answer": "Top 5 drugs by total drug-line cost in SGD for last quarter:\n\n| Drug | Total cost (SGD) |\n|---|---:|\n| Drug-001 | 12,871.32 |\n| Drug-002 | 8,463.33 |\n| Drug-003 | 6,383.66 |\n| Drug-005 | 4,978.98 |\n| Drug-004 | 4,919.08 |",
     "tables": [
      {
       "columns": [
-       "drug_name",
+       "drug",
        "total_cost_sgd"
       ],
       "rows": [
@@ -1254,13 +1271,13 @@
      }
     ],
     "sql": [
-     "SELECT d.drug_name, round(sum(cd.cost / cl.currency_rate), 2) AS total_cost_sgd FROM claim_latest cl JOIN claim_drug cd ON cd.claim_id = cl.claim_id JOIN drug_dim d ON d.drug_id = cd.drug_id WHERE cl.is_approved AND cl.visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND cl.visit_date <= DATE '2026-11-30' AND cl.currency_rate > 0 GROUP BY d.drug_id, d.drug_name ORDER BY total_cost_sgd DESC, d.drug_name LIMIT 5"
+     "SELECT dd.drug_name AS drug, ROUND(SUM(cd.cost / cl.currency_rate), 2) AS total_cost_sgd FROM claim_latest cl JOIN claim_drug cd ON cd.claim_id = cl.claim_id JOIN drug_dim dd ON dd.drug_id = cd.drug_id WHERE cl.is_approved AND cl.visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND cl.visit_date <= DATE '2026-11-30' GROUP BY dd.drug_id, dd.drug_name ORDER BY total_cost_sgd DESC, drug ASC, dd.drug_id ASC LIMIT 5"
     ],
     "assumptions": [
-     "Used approved claims only and the latest version of each claim.",
-     "Last quarter means visit dates from 2026-07-01 through 2026-09-30, inclusive; excluded visits after 2026-11-30.",
-     "Converted each drug-line cost from the claim's local currency to SGD by dividing by the claim currency_rate; summed line costs by drug.",
-     "Drug costs are line-level amounts and are not the claim amount."
+     "Used approved claims only, based on the latest version of each claim.",
+     "Interpreted last quarter as 2026-07-01 through 2026-09-30, inclusive, applied to visit_date; excluded visit dates after the 2026-11-30 as-of date.",
+     "Converted each drug line's local-currency cost to SGD by dividing by the claim's currency_rate, then summed by drug. All eligible drug lines had a usable conversion rate and cost.",
+     "Ranked by summed drug-line costs; these totals are not claim amounts."
     ]
    }
   },
@@ -1270,7 +1287,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.3,
+   "seconds": 5.8,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1336,13 +1353,14 @@
      }
     ],
     "sql": [
-     "SELECT region, round(sum(claim_amt_sgd), 2) AS total_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-08-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' GROUP BY region ORDER BY region"
+     "SELECT region, ROUND(SUM(claim_amt_sgd), 2) AS total_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-08-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' GROUP BY region ORDER BY region"
     ],
     "assumptions": [
-     "Used claim_latest (one latest version per claim) and approved claims only.",
-     "Claim amount means net claim_amt_sgd in SGD.",
-     "Last 3 months means the three complete calendar months before November 2026: 2026-08-01 through 2026-10-31; filtered on visit_date and excluded dates after 2026-11-30.",
-     "Kept the Unknown region group in the breakdown."
+     "Used claim_latest, one latest-loaded row per claim, and included approved claims only (is_approved = true).",
+     "Interpreted \u201clast 3 months\u201d as the three complete calendar months before the current month: 2026-08-01 through 2026-10-31, inclusive, applied to visit_date.",
+     "Included only visit dates on or before the as-of date 2026-11-30.",
+     "Reported net claim amount in SGD using claim_amt_sgd.",
+     "Kept Unknown as a region group; it represents claims without a known region attribution."
     ]
    }
   },
@@ -1352,7 +1370,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.8,
+   "seconds": 5.1,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1378,8 +1396,8 @@
      "SELECT COUNT(*) AS claim_records_loaded FROM claim WHERE CAST(loaded_at AS DATE) = DATE '2026-11-15'"
     ],
     "assumptions": [
-     "Counted rows in the raw claim table, so multiple versions of a claim count as separate loaded records.",
-     "Used the calendar date of loaded_at, regardless of time of day. No approved-claim or visit-date filter was applied."
+     "Counted rows in the raw claim table, so each loaded claim version is a record; this is not a count of distinct claims.",
+     "Used the calendar date of loaded_at and included all claim statuses."
     ]
    }
   },
@@ -1389,12 +1407,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 3.5,
+   "seconds": 3.0,
    "expected_status": "declined",
    "expected_rows": [],
    "output": {
     "status": "declined",
-    "answer": "I can\u2019t run or disclose diagnosis notes. The requested free-text field is sensitive and unavailable; the exact query also references a relation that does not contain that column.",
+    "answer": "I can\u2019t provide diagnosis notes or run a query that retrieves them. They are sensitive free-text notes and are not available for reporting.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1406,12 +1424,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 2.8,
+   "seconds": 3.9,
    "expected_status": "unanswerable",
    "expected_rows": [],
    "output": {
     "status": "unanswerable",
-    "answer": "I can\u2019t determine the number of unique patients: the database has no patient or member identifier. It can report the number of approved claims last month, but a claim count is not a patient count.",
+    "answer": "The database has no patient, member, or person identifier, so it cannot determine how many unique patients had an approved claim last month. It can count approved claims, but a claim count is not a patient count.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1423,7 +1441,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.8,
+   "seconds": 4.9,
    "expected_status": [
     "answered",
     "clarify"
@@ -1435,27 +1453,28 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Total approved claim amount billed in MYR last month (2026-10-01 through 2026-10-31): **MYR 111,065.70**.",
+    "answer": "Total approved claim amount billed in MYR last month: **MYR 111,065.70** (399 approved claims).",
     "tables": [
      {
       "columns": [
-       "total_approved_claim_amount_myr"
+       "approved_claim_amount_myr",
+       "approved_claim_count"
       ],
       "rows": [
        [
-        111065.7
+        111065.7,
+        399
        ]
       ]
      }
     ],
     "sql": [
-     "SELECT ROUND(COALESCE(SUM(claim_amt), 0), 2) AS total_approved_claim_amount_myr FROM claim_latest WHERE is_approved AND currency_code = 'MYR' AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT round(sum(claim_amt), 2) AS approved_claim_amount_myr, count(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND currency_code = 'MYR' AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used the latest version per claim and included approved claims only.",
-     "Interpreted \u201cin MYR\u201d as claims whose currency_code is MYR, summing their local claim_amt without currency conversion.",
-     "Applied the last-month window to visit_date, inclusive, and excluded visits after the as-of date (2026-11-30).",
-     "Claim amount means net claim_amt, not gross grand_total."
+     "Used claim_latest (one latest version per claim) and counted approved claims only (is_approved).",
+     "Interpreted MYR as claims whose currency_code is MYR, summing the local claim_amt because the data does not provide conversion rates into MYR for all claims.",
+     "Applied last month to visit_date: 2026-10-01 through 2026-10-31 inclusive; excluded visit dates after the as-of date, 2026-11-30."
     ]
    }
   },
@@ -1465,7 +1484,7 @@
    "as_of": "2026-02-10",
    "passed": true,
    "reason": "",
-   "seconds": 4.6,
+   "seconds": 5.3,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1474,7 +1493,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There were 1,244 rejected claims last quarter (2025-10-01 through 2025-12-31).",
+    "answer": "There were 1,244 rejected claims last quarter.",
     "tables": [
      {
       "columns": [
@@ -1488,13 +1507,13 @@
      }
     ],
     "sql": [
-     "SELECT count(*) AS rejected_claim_count FROM claim_latest WHERE is_rejected AND visit_date BETWEEN DATE '2025-10-01' AND DATE '2025-12-31' AND visit_date <= DATE '2026-02-10'"
+     "SELECT count(*) AS rejected_claim_count\nFROM claim_latest\nWHERE is_rejected\n  AND visit_date BETWEEN DATE '2025-10-01' AND DATE '2025-12-31'\n  AND visit_date <= DATE '2026-02-10'"
     ],
     "assumptions": [
-     "Used claim_latest (one row per claim, latest loaded version).",
-     "Counted claims where is_rejected is true; rejected claims may also be approved.",
-     "Applied last quarter to visit_date and excluded future visit dates after 2026-02-10.",
-     "Included claims based on their latest version even if it was loaded after the as-of date."
+     "Used claim_latest, which counts each claim once using its most recently loaded version.",
+     "Interpreted last quarter as 2025-10-01 through 2025-12-31, inclusive, based on visit_date; excluded visits after 2026-02-10.",
+     "Rejected means is_rejected on the latest version. Rejected claims may also be approved.",
+     "Latest versions were used even if loaded after the as-of date."
     ]
    }
   },
@@ -1504,7 +1523,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.4,
+   "seconds": 7.4,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1518,39 +1537,39 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "For year to date (2026-01-01 through 2026-11-30), Specialist providers had an average approved claim size of SGD 83.59 across 2,177 claims; GP providers averaged SGD 81.70 across 8,497 claims. Total approved claim amounts were SGD 181,981.30 for Specialist and SGD 694,193.75 for GP.",
+    "answer": "For approved claims with visit dates in 2026 through November 30, average claim size was **SGD 81.70 for GP providers** and **SGD 83.59 for Specialist providers**. The table shows the claim counts and total SGD amounts used in the comparison.",
     "tables": [
      {
       "columns": [
        "provider_type",
-       "approved_claims",
-       "avg_claim_size_sgd",
-       "total_claim_amount_sgd"
+       "approved_claim_count",
+       "total_claim_amount_sgd",
+       "average_claim_size_sgd"
       ],
       "rows": [
        [
         "GP",
         8497,
-        81.7,
-        694193.75
+        694193.75,
+        81.7
        ],
        [
         "Specialist",
         2177,
-        83.59,
-        181981.3
+        181981.3,
+        83.59
        ]
       ]
      }
     ],
     "sql": [
-     "SELECT provider_type, COUNT(*) AS approved_claims, round(AVG(claim_amt_sgd), 2) AS avg_claim_size_sgd, round(SUM(claim_amt_sgd), 2) AS total_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30' AND provider_type IN ('GP', 'Specialist') GROUP BY provider_type ORDER BY provider_type"
+     "SELECT provider_type, COUNT(*) AS approved_claim_count, ROUND(SUM(claim_amt_sgd), 2) AS total_claim_amount_sgd, ROUND(SUM(claim_amt_sgd) / COUNT(*), 2) AS average_claim_size_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30' AND provider_type IN ('GP', 'Specialist') GROUP BY provider_type ORDER BY CASE provider_type WHEN 'GP' THEN 1 WHEN 'Specialist' THEN 2 END"
     ],
     "assumptions": [
-     "Used claim_latest, one latest version per claim, and approved claims only.",
-     "Year to date means visit dates from 2026-01-01 through 2026-11-30 inclusive; claims with visit dates after the as-of date were excluded.",
-     "Average claim size is total net claim_amt_sgd divided by approved claim count; amounts are in SGD.",
-     "Included only provider types GP and Specialist; Unknown provider types are not part of this comparison."
+     "Used claim_latest (latest version per claim) and approved claims only; approved means is_approved.",
+     "Year to date means visit_date from 2026-01-01 through 2026-11-30 inclusive. Excluded visits after the as-of date.",
+     "Average claim size is total net claim amount in SGD divided by approved claim count.",
+     "Compared provider_type values exactly 'GP' and 'Specialist'; other types, including Unknown, are not part of this specific comparison."
     ]
    }
   },
@@ -1560,7 +1579,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.4,
+   "seconds": 5.1,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1569,13 +1588,13 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Singapore providers accounted for 22.33% of last month's approved claim amount: SGD 33,740.67 of SGD 151,073.08.",
+    "answer": "Singapore accounted for 22.33% of last month\u2019s approved claim amount. Singapore\u2019s approved amount was SGD 33,740.67, out of SGD 151,073.08 overall.",
     "tables": [
      {
       "columns": [
        "singapore_approved_amount_sgd",
-       "total_approved_amount_sgd",
-       "singapore_share_pct"
+       "all_approved_amount_sgd",
+       "singapore_share_percent"
       ],
       "rows": [
        [
@@ -1587,12 +1606,13 @@
      }
     ],
     "sql": [
-     "WITH amounts AS (SELECT SUM(claim_amt_sgd) AS total_sgd, SUM(claim_amt_sgd) FILTER (WHERE country_code = 'SG') AS singapore_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30') SELECT ROUND(singapore_sgd, 2) AS singapore_approved_amount_sgd, ROUND(total_sgd, 2) AS total_approved_amount_sgd, ROUND(100.0 * singapore_sgd / NULLIF(total_sgd, 0), 2) AS singapore_share_pct FROM amounts"
+     "SELECT round(SUM(CASE WHEN country_code = 'SG' THEN claim_amt_sgd ELSE 0 END), 2) AS singapore_approved_amount_sgd, round(SUM(claim_amt_sgd), 2) AS all_approved_amount_sgd, round(100.0 * SUM(CASE WHEN country_code = 'SG' THEN claim_amt_sgd ELSE 0 END) / NULLIF(SUM(claim_amt_sgd), 0), 2) AS singapore_share_percent FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used claim_latest (the latest version of each claim) and approved claims only.",
-     "Last month means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded future-dated visits beyond 2026-11-30.",
-     "Claim amount means net claim_amt_sgd. Singapore is based on provider country_code = 'SG', not claim currency."
+     "\u201cLast month\u201d means the complete period 2026-10-01 through 2026-10-31, based on visit_date.",
+     "Approved claims are those with is_approved = true; amounts are net claim_amt_sgd, in SGD.",
+     "Country is the provider\u2019s country_code; claims with Unknown country are included in the overall denominator but not the Singapore numerator.",
+     "Only claims with visit_date on or before 2026-11-30 are included."
     ]
    }
   },
@@ -1602,7 +1622,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.5,
+   "seconds": 5.2,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1628,7 +1648,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "The 5 largest approved claims last month are shown below; amounts are in SGD.",
+    "answer": "The 5 largest approved claims last month, ranked by net amount in SGD:\n\n| Claim ID | Amount (SGD) |\n|---:|---:|\n| 6529 | 838.55 |\n| 1292 | 633.93 |\n| 1475 | 617.60 |\n| 39223 | 599.91 |\n| 39980 | 524.09 |",
     "tables": [
      {
       "columns": [
@@ -1663,10 +1683,10 @@
      "SELECT claim_id, round(claim_amt_sgd, 2) AS claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' ORDER BY claim_amt_sgd DESC NULLS LAST, claim_id LIMIT 5"
     ],
     "assumptions": [
-     "Used claim_latest (one latest-loaded row per claim).",
-     "Approved means is_approved = true.",
-     "Last month means visit dates from 2026-10-01 through 2026-10-31 inclusive; claims with visit dates after the as-of date are excluded.",
-     "Claim amount is the net amount converted to SGD (claim_amt_sgd)."
+     "Used claim_latest (the latest version per claim) and approved claims only.",
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive.",
+     "Amounts are net claim amounts in SGD (claim_amt_sgd); rows with unusable/null SGD amounts sort last.",
+     "Excluded claims with visit dates after the as-of date, 2026-11-30."
     ]
    }
   },
@@ -1676,7 +1696,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.4,
+   "seconds": 5.7,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1689,7 +1709,7 @@
     "tables": [
      {
       "columns": [
-       "pending_claims"
+       "pending_claim_count"
       ],
       "rows": [
        [
@@ -1699,12 +1719,12 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS pending_claims FROM claim_latest WHERE NOT is_approved AND NOT is_rejected AND NOT is_voided AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) AS pending_claim_count\nFROM claim_latest\nWHERE visit_date <= DATE '2026-11-30'\n  AND NOT is_approved\n  AND NOT is_rejected\n  AND NOT is_voided"
     ],
     "assumptions": [
-     "Counted one latest-version row per claim from claim_latest.",
+     "Used claim_latest (one latest-version row per claim).",
      "Pending means not approved, not rejected, and not voided.",
-     "Excluded claims with visit_date after 2026-11-30; no narrower date window was specified, so included all visits up to that date."
+     "Included claims with visit_date through 2026-11-30; excluded visits after the as-of date."
     ]
    }
   },
@@ -1714,7 +1734,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 5.1,
+   "seconds": 6.7,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1723,28 +1743,30 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Last month, the average was 1.45 diagnoses per approved claim (1,775 approved claims).",
+    "answer": "Last month, approved claims averaged **1.45 diagnoses per claim** (2,582 diagnoses across 1,775 approved claims). Claims with no diagnosis are included as zero.",
     "tables": [
      {
       "columns": [
-       "avg_diagnoses_per_approved_claim",
-       "approved_claims"
+       "approved_claims",
+       "total_diagnoses",
+       "average_diagnoses_per_approved_claim"
       ],
       "rows": [
        [
-        1.45,
-        1775
+        1775,
+        2582,
+        1.45
        ]
       ]
      }
     ],
     "sql": [
-     "WITH approved AS (SELECT claim_id FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'), dx AS (SELECT a.claim_id, COUNT(i.icd_id) AS diagnosis_count FROM approved a LEFT JOIN claim_icd i USING (claim_id) GROUP BY a.claim_id) SELECT ROUND(AVG(CAST(diagnosis_count AS DOUBLE)), 2) AS avg_diagnoses_per_approved_claim, COUNT(*) AS approved_claims FROM dx"
+     "WITH approved AS (\n    SELECT claim_id\n    FROM claim_latest\n    WHERE is_approved\n      AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n      AND visit_date <= DATE '2026-11-30'\n), per_claim AS (\n    SELECT a.claim_id, COUNT(i.claim_id) AS diagnosis_count\n    FROM approved a\n    LEFT JOIN claim_icd i ON i.claim_id = a.claim_id\n    GROUP BY a.claim_id\n)\nSELECT COUNT(*) AS approved_claims,\n       SUM(diagnosis_count) AS total_diagnoses,\n       ROUND(AVG(diagnosis_count), 2) AS average_diagnoses_per_approved_claim\nFROM per_claim"
     ],
     "assumptions": [
-     "Used claim_latest, with one latest-version row per claim; approved means is_approved.",
-     "Applied last month as October 1\u201331, 2026, by visit_date, and excluded visits after the as-of date of November 30, 2026.",
-     "Counted distinct diagnosis links from claim_icd per approved claim; claims with no diagnosis contribute zero to the average."
+     "Used claim_latest, one row per claim, and included approved claims only (is_approved).",
+     "Last month means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visit dates after the 2026-11-30 as-of date.",
+     "Used claim_icd, which has one row per claim-diagnosis; included approved claims with no diagnosis in the average as zero."
     ]
    }
   },
@@ -1754,7 +1776,7 @@
    "as_of": "2026-03-15",
    "passed": true,
    "reason": "",
-   "seconds": 11.6,
+   "seconds": 4.6,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1763,11 +1785,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There were 4 approved claims last month.",
+    "answer": "There were 4 approved claims last month (February 1\u201328, 2026).",
     "tables": [
      {
       "columns": [
-       "approved_claims"
+       "approved_claim_count"
       ],
       "rows": [
        [
@@ -1777,12 +1799,12 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS approved_claims FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-02-01' AND DATE '2026-02-28' AND visit_date <= DATE '2026-03-15'"
+     "SELECT COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-02-01' AND DATE '2026-02-28' AND visit_date <= DATE '2026-03-15'"
     ],
     "assumptions": [
-     "Used claim_latest (one latest-version row per claim).",
-     "\u201cLast month\u201d means visit dates from 2026-02-01 through 2026-02-28, inclusive; excluded visit dates after the as-of date.",
-     "Approved means is_approved = true."
+     "Used claim_latest, which keeps one latest version per claim.",
+     "Approved means is_approved = true.",
+     "Last month is February 1\u201328, 2026, based on visit_date; excluded visits after the as-of date of March 15, 2026."
     ]
    }
   },
@@ -1810,41 +1832,45 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Approved claim amount by provider country, in SGD:\n\n| Country code | Approved claim amount (SGD) | Approved claims missing SGD amount |\n|---|---:|---:|\n| MY | 100.00 | 1 |\n| SG | 10.00 | 0 |\n| Unknown | 80.00 | 0 |\n\nOne approved claim is excluded from the SGD amount because its currency rate is unusable. Unknown is retained as a country group.",
+    "answer": "Approved net claim amount by provider country (SGD): MY \u2014 100.00; SG \u2014 10.00; Unknown \u2014 80.00. The table includes approved claim counts and counts missing a usable SGD amount.",
     "tables": [
      {
       "columns": [
        "country_code",
-       "approved_claim_amount_sgd",
-       "approved_claims_missing_sgd_amount"
+       "approved_claims",
+       "claims_missing_sgd_amount",
+       "approved_claim_amount_sgd"
       ],
       "rows": [
        [
         "MY",
-        100.0,
-        1
+        2,
+        1,
+        100.0
        ],
        [
         "SG",
-        10.0,
-        0
+        1,
+        0,
+        10.0
        ],
        [
         "Unknown",
-        80.0,
-        0
+        1,
+        0,
+        80.0
        ]
       ]
      }
     ],
     "sql": [
-     "SELECT country_code, round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd, count(*) FILTER (WHERE claim_amt_sgd IS NULL) AS approved_claims_missing_sgd_amount FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-03-15' GROUP BY country_code ORDER BY country_code"
+     "SELECT country_code, COUNT(*) AS approved_claims, COUNT(*) FILTER (WHERE claim_amt_sgd IS NULL) AS claims_missing_sgd_amount, ROUND(SUM(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-03-15' GROUP BY country_code ORDER BY country_code"
     ],
     "assumptions": [
-     "Used claim_latest, one latest row per claim.",
-     "Included approved claims only and excluded visits after 2026-03-15.",
-     "Reported net claim amount in SGD using claim_amt_sgd; claims with unusable conversion rates are not included in the amount.",
-     "Country is the provider's country_code; missing provider country is retained as Unknown."
+     "Used claim_latest, one latest row per claim, and included approved claims only (is_approved).",
+     "Included all visit dates up to and including 2026-03-15; excluded future-dated visits.",
+     "Reported net claim amount in SGD (claim_amt_sgd). Claims with unusable currency rates contribute no amount to the SGD sum; their counts are shown separately.",
+     "Grouped by provider country_code and retained Unknown as a bucket."
     ]
    }
   },
@@ -1854,7 +1880,7 @@
    "as_of": "2026-03-15",
    "passed": true,
    "reason": "",
-   "seconds": 7.3,
+   "seconds": 4.5,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1863,7 +1889,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There are 3 providers.",
+    "answer": "There are 3 providers. Duplicate provider records are merged in this count.",
     "tables": [
      {
       "columns": [
@@ -1880,7 +1906,7 @@
      "SELECT COUNT(*) AS provider_count FROM provider_dim"
     ],
     "assumptions": [
-     "Counted distinct real providers in provider_dim; duplicate provider records are merged."
+     "Counted real providers in provider_dim; duplicate raw provider rows are merged."
     ]
    }
   },
@@ -1890,12 +1916,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 3.1,
+   "seconds": 3.6,
    "expected_status": "unanswerable",
    "expected_rows": [],
    "output": {
     "status": "unanswerable",
-    "answer": "This cannot be answered from the available data: the database has no member or person identifier. I can report how many claims were made, but that would not tell how many members made more than one claim.",
+    "answer": "The database has no member or patient identifier, so it cannot determine how many members made more than one claim. It can report claims, but a claim count cannot be used as a count of members.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1907,12 +1933,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 2.7,
+   "seconds": 3.0,
    "expected_status": "unanswerable",
    "expected_rows": [],
    "output": {
     "status": "unanswerable",
-    "answer": "Patient gender is not present in the available claims data, and the database has no patient/member identifier. I can\u2019t report claim amounts by patient gender.",
+    "answer": "Patient gender is not available in the claims database, so I can\u2019t report claim amounts by gender. I could report total approved claim amount for last month without a gender breakdown.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1924,12 +1950,12 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 3.7,
+   "seconds": 3.3,
    "expected_status": "unanswerable",
    "expected_rows": [],
    "output": {
     "status": "unanswerable",
-    "answer": "The available claims data does not include an insurance-plan field, so I can\u2019t identify which plan has the highest claim amount.",
+    "answer": "The claims database has no insurance-plan field or plan relation, so I can\u2019t identify which plan has the highest claim amount.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1946,7 +1972,7 @@
    "expected_rows": [],
    "output": {
     "status": "unanswerable",
-    "answer": "The database does not contain a payment date, so the average number of days between approval and payment cannot be calculated. It contains approval timestamps only.",
+    "answer": "The database does not contain a payment date, so I can\u2019t calculate the average number of days between approval and payment.",
     "tables": [],
     "sql": [],
     "assumptions": []
@@ -1958,7 +1984,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.8,
+   "seconds": 5.1,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -1967,11 +1993,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Harbour Family Clinic 1 had 126 approved claims last month.",
+    "answer": "Harbour Family Clinic 1 had **126 approved claims** last month.",
     "tables": [
      {
       "columns": [
-       "approved_claim_count"
+       "approved_claims"
       ],
       "rows": [
        [
@@ -1981,12 +2007,12 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND provider_name = 'Harbour Family Clinic 1' AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) AS approved_claims FROM claim_latest WHERE is_approved AND provider_name = 'Harbour Family Clinic 1' AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used claim_latest (one row per claim, using its most recently loaded version).",
-     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded visit dates after 2026-11-30.",
-     "Approved means is_approved = true."
+     "Used claim_latest, which keeps one latest-loaded version per claim.",
+     "Approved means is_approved is true.",
+     "Last month means visit dates from 2026-10-01 through 2026-10-31, inclusive; visits after the as-of date 2026-11-30 are excluded."
     ]
    }
   },
@@ -1996,7 +2022,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.5,
+   "seconds": 5.8,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2019,12 +2045,13 @@
      }
     ],
     "sql": [
-     "SELECT ROUND(median(claim_amt_sgd), 2) AS median_approved_claim_size_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT round(median(claim_amt_sgd), 2) AS median_approved_claim_size_sgd\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND visit_date <= DATE '2026-11-30'\n  AND claim_amt_sgd IS NOT NULL"
     ],
     "assumptions": [
-     "Used claim_latest, one latest version per claim.",
-     "Included approved claims only, using claim_amt_sgd (net claim amount converted to SGD).",
-     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; future visit dates are excluded."
+     "Used claim_latest, which keeps the most recently loaded version of each claim.",
+     "Included approved claims only, using is_approved.",
+     "Applied last month to visit_date: 2026-10-01 through 2026-10-31, inclusive; excluded visits after 2026-11-30.",
+     "Calculated the median from non-NULL claim_amt_sgd values (net claims converted to SGD)."
     ]
    }
   },
@@ -2034,7 +2061,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.7,
+   "seconds": 4.9,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2044,7 +2071,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "November 2026 had the highest approved claim amount, at SGD 152,957.40.",
+    "answer": "November 2026 had the highest approved claim amount this year, at SGD 152,957.40.",
     "tables": [
      {
       "columns": [
@@ -2060,12 +2087,12 @@
      }
     ],
     "sql": [
-     "SELECT strftime(visit_date, '%Y-%m') AS visit_month, round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30' GROUP BY 1 ORDER BY approved_claim_amount_sgd DESC, visit_month ASC LIMIT 1"
+     "SELECT visit_month, round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30' GROUP BY visit_month ORDER BY approved_claim_amount_sgd DESC, visit_month ASC LIMIT 1"
     ],
     "assumptions": [
-     "Used the latest claim version from claim_latest and approved claims only (is_approved).",
-     "Grouped by visit month and included visits from 2026-01-01 through 2026-11-30, excluding any visit dates after the as-of date.",
-     "Claim amount means net amount converted to SGD (claim_amt_sgd)."
+     "Used claim_latest, one latest-version row per claim, and included approved claims only (is_approved).",
+     "Interpreted \u201cthis year\u201d as visit dates from 2026-01-01 through 2026-11-30 inclusive; excluded visits dated after the as-of date.",
+     "Summed net claim amounts converted to SGD (claim_amt_sgd), grouped by visit month."
     ]
    }
   },
@@ -2075,7 +2102,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.4,
+   "seconds": 4.8,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2088,7 +2115,7 @@
     "tables": [
      {
       "columns": [
-       "visits"
+       "approved_visits"
       ],
       "rows": [
        [
@@ -2098,12 +2125,13 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS visits FROM claim_latest WHERE is_approved AND country_code = 'ID' AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) AS approved_visits FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' AND country_code = 'ID'"
     ],
     "assumptions": [
-     "Visits are counted as approved claims using claim_latest (one latest row per claim).",
-     "October 2026 means visit dates from 2026-10-01 through 2026-10-31, inclusive; future-dated visits are excluded.",
-     "Indonesia is identified by the provider country code ID."
+     "Visits means approved claims, using the latest version of each claim.",
+     "October 2026 is 2026-10-01 through 2026-10-31, inclusive, based on visit_date; future-dated visits are excluded.",
+     "Indonesia is identified by provider country_code = 'ID'.",
+     "Latest claim versions are used, including versions loaded after the as-of date."
     ]
    }
   },
@@ -2113,7 +2141,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 6.4,
+   "seconds": 8.1,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2139,7 +2167,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Rejection rate by provider type last quarter:\n\n| Provider type | Claims | Rejected claims | Rejection rate (%) |\n|---|---:|---:|---:|\n| Dental | 325 | 57 | 17.54 |\n| GP | 3,245 | 565 | 17.41 |\n| Hospital | 290 | 49 | 16.90 |\n| Specialist | 850 | 139 | 16.35 |\n| Unknown | 2,777 | 450 | 16.20 |",
+    "answer": "Rejection rate by provider type last quarter:\n\n| Provider type | Total claims | Rejected claims | Rejection rate (%) |\n|---|---:|---:|---:|\n| Dental | 325 | 57 | 17.54 |\n| GP | 3,245 | 565 | 17.41 |\n| Hospital | 290 | 49 | 16.90 |\n| Specialist | 850 | 139 | 16.35 |\n| Unknown | 2,777 | 450 | 16.20 |",
     "tables": [
      {
       "columns": [
@@ -2183,13 +2211,12 @@
      }
     ],
     "sql": [
-     "SELECT provider_type, count(*) AS total_claims, count(*) FILTER (WHERE is_rejected) AS rejected_claims, round(100.0 * count(*) FILTER (WHERE is_rejected) / NULLIF(count(*), 0), 2) AS rejection_rate_pct FROM claim_latest WHERE visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' GROUP BY provider_type ORDER BY provider_type"
+     "SELECT provider_type, COUNT(*) AS total_claims, COUNT(*) FILTER (WHERE is_rejected) AS rejected_claims, ROUND(100.0 * COUNT(*) FILTER (WHERE is_rejected) / NULLIF(COUNT(*), 0), 2) AS rejection_rate_pct FROM claim_latest WHERE visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' GROUP BY provider_type ORDER BY CASE WHEN provider_type = 'Unknown' THEN 1 ELSE 0 END, provider_type"
     ],
     "assumptions": [
-     "Last quarter means 2026-07-01 through 2026-09-30 inclusive, applied to visit_date.",
-     "Rejection rate is rejected claims divided by all claims in that provider type for the period; rejected claims are not restricted to approved claims. A claim may be both rejected and approved.",
-     "Used claim_latest (one latest-loaded row per claim) and excluded future visit dates after 2026-11-30.",
-     "Kept Unknown provider type as a group."
+     "Used claim_latest, one latest version per claim. The period is last quarter, inclusive visit dates 2026-07-01 through 2026-09-30; claims with visit dates after 2026-11-30 are excluded.",
+     "Rejection rate is rejected claims (is_rejected) divided by all claims in the provider-type group for the period. The denominator includes all claim statuses, including voided claims; a claim can be both rejected and approved.",
+     "Kept Unknown as a provider-type group rather than excluding unattributed claims. Rates are percentages rounded to two decimal places."
     ]
    }
   },
@@ -2199,7 +2226,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.0,
+   "seconds": 5.1,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2208,11 +2235,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "371 claims have a visit date after the as-of date of 2026-11-30.",
+    "answer": "There are 371 claims with a visit date after 2026-11-30.",
     "tables": [
      {
       "columns": [
-       "claims_with_future_visit_date"
+       "future_visit_claim_count"
       ],
       "rows": [
        [
@@ -2222,11 +2249,11 @@
      }
     ],
     "sql": [
-     "SELECT COUNT(*) AS claims_with_future_visit_date FROM claim_latest WHERE visit_date > DATE '2026-11-30'"
+     "SELECT COUNT(*) AS future_visit_claim_count FROM claim_latest WHERE visit_date > DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Counted one latest-version row per claim from claim_latest, regardless of approval status.",
-     "\u201cFuture\u201d means visit_date after 2026-11-30, the stated as-of date."
+     "Counted one latest-version row per claim from claim_latest; included claims of every status.",
+     "\u201cFuture\u201d means visit_date later than the as-of date, 2026-11-30."
     ]
    }
   },
@@ -2246,7 +2273,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "Locum Doctor (doctor ID 1) handled the most: 1,103 approved claims last quarter.",
+    "answer": "Locum Doctor (doctor ID 1) handled the most approved claims last quarter, with 1,103 claims.",
     "tables": [
      {
       "columns": [
@@ -2264,13 +2291,12 @@
      }
     ],
     "sql": [
-     "SELECT doctor_id, doctor_name, count(*) AS approved_claims FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' AND doctor_name <> 'Unknown' GROUP BY doctor_id, doctor_name ORDER BY approved_claims DESC, doctor_name, doctor_id LIMIT 1"
+     "SELECT doctor_id, doctor_name, COUNT(*) AS approved_claims FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' AND doctor_id IS NOT NULL GROUP BY doctor_id, doctor_name ORDER BY approved_claims DESC, doctor_name, doctor_id LIMIT 1"
     ],
     "assumptions": [
-     "Last quarter means visit dates from 2026-07-01 through 2026-09-30, inclusive; future-dated visits are excluded.",
-     "Claims are counted from claim_latest and approved means is_approved = true.",
-     "Doctors are grouped by doctor_id, so merged duplicate doctor entries are counted as one; distinct doctors with the same name remain separate.",
-     "Unknown doctor attribution is excluded from the named-doctor ranking. Latest loaded claim versions are used, including versions loaded after the as-of date."
+     "\u201cLast quarter\u201d means the complete calendar quarter from 2026-07-01 through 2026-09-30, based on visit_date.",
+     "Used claim_latest (one latest version per claim) and counted approved claims only; excluded visit dates after 2026-11-30.",
+     "Grouped doctors by doctor_id, so distinct doctors are not combined even if they share a name. Claims with Unknown doctor attribution were excluded because Unknown is not a doctor."
     ]
    }
   },
@@ -2280,7 +2306,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.1,
+   "seconds": 4.3,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2302,7 +2328,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "| Specialty | Doctor count |\n|---|---:|\n| Cardiology | 16 |\n| Dermatology | 31 |\n| General Practice | 50 |\n| Orthopaedics | 22 |",
+    "answer": "Doctors by specialty:\n\n| Specialty | Doctor count |\n|---|---:|\n| Cardiology | 16 |\n| Dermatology | 31 |\n| General Practice | 50 |\n| Orthopaedics | 22 |",
     "tables": [
      {
       "columns": [
@@ -2330,11 +2356,11 @@
      }
     ],
     "sql": [
-     "SELECT specialty, COUNT(DISTINCT doctor_id) AS doctor_count FROM doctor_dim GROUP BY specialty ORDER BY specialty"
+     "SELECT specialty, count(*) AS doctor_count FROM doctor_dim GROUP BY specialty ORDER BY specialty"
     ],
     "assumptions": [
-     "Count distinct real doctors by doctor_id in doctor_dim, which merges duplicate doctor records while keeping different doctors separate even if they share a name.",
-     "The output includes the specialty groups present in doctor_dim; no Unknown specialty group was present."
+     "Counted distinct real doctors from doctor_dim, which merges duplicate doctor records; doctors sharing a name remain distinct.",
+     "Unknown specialty is not present as a specialty group in doctor_dim."
     ]
    }
   },
@@ -2344,7 +2370,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 4.7,
+   "seconds": 5.9,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2353,11 +2379,11 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "There were 1,240 claims with a rejection date in the last quarter.",
+    "answer": "There were 1,240 claims with a rejection date in the last quarter (July 1\u2013September 30, 2026).",
     "tables": [
      {
       "columns": [
-       "claims_with_rejection_date"
+       "claims_rejected_last_quarter"
       ],
       "rows": [
        [
@@ -2367,14 +2393,13 @@
      }
     ],
     "sql": [
-     "SELECT count(*) AS claims_with_rejection_date FROM claim_latest WHERE rejected_on IS NOT NULL AND CAST(rejected_on AS DATE) BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
+     "SELECT COUNT(*) AS claims_rejected_last_quarter FROM claim_latest WHERE is_rejected AND CAST(rejected_on AS DATE) BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
     ],
     "assumptions": [
-     "Used the latest version of each claim in claim_latest.",
-     "Last quarter means July 1 through September 30, 2026, inclusive; applied to rejected_on by calendar date.",
-     "Included any claim with rejected_on set in that window, regardless of approval status; claims may be both rejected and approved.",
-     "Excluded claims with visit_date after the as-of date, November 30, 2026.",
-     "The latest loaded version is used even if loaded after the as-of date."
+     "Used the latest version of each claim and counted claims flagged rejected (`is_rejected`).",
+     "Applied the last-quarter window to the calendar date of `rejected_on`, inclusive of July 1 and September 30, 2026.",
+     "Excluded claims with a `visit_date` after the as-of date, November 30, 2026.",
+     "Claims loaded after the as-of date are still included if they are the latest version."
     ]
    }
   },
@@ -2384,7 +2409,7 @@
    "as_of": "2026-11-30",
    "passed": true,
    "reason": "",
-   "seconds": 6.3,
+   "seconds": 5.6,
    "expected_status": "answered",
    "expected_rows": [
     [
@@ -2393,7 +2418,7 @@
    ],
    "output": {
     "status": "answered",
-    "answer": "The total approved claim amount for October 2026 claims with a hypertension diagnosis was SGD 21,329.75.",
+    "answer": "Total approved claim amount for claims with a hypertension diagnosis last month: SGD 21,329.75.",
     "tables": [
      {
       "columns": [
@@ -2407,13 +2432,2402 @@
      }
     ],
     "sql": [
-     "SELECT round(sum(cl.claim_amt_sgd), 2) AS total_approved_claim_amount_sgd FROM claim_latest cl WHERE cl.is_approved AND cl.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND cl.visit_date <= DATE '2026-11-30' AND cl.claim_id IN (SELECT ci.claim_id FROM claim_icd ci WHERE lower(ci.diagnosis) LIKE '%hypertension%')"
+     "SELECT ROUND(SUM(claim_amt_sgd), 2) AS total_approved_claim_amount_sgd\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND visit_date <= DATE '2026-11-30'\n  AND claim_id IN (\n    SELECT claim_id\n    FROM claim_icd\n    WHERE lower(diagnosis) LIKE '%hypertension%'\n  )"
     ],
     "assumptions": [
-     "\u201cLast month\u201d means the complete calendar month of October 1\u201331, 2026, based on visit_date; future-dated visits are excluded.",
-     "Uses the latest version of each claim and approved claims only (is_approved).",
-     "Claim amount means net amount in SGD (claim_amt_sgd).",
-     "Hypertension diagnosis is identified by a diagnosis description containing \u201chypertension\u201d (case-insensitive); each qualifying claim is included once even if it has multiple diagnoses."
+     "\u201cLast month\u201d means visits from 2026-10-01 through 2026-10-31, inclusive, using visit_date.",
+     "Used the latest claim version and included approved claims only (is_approved).",
+     "A hypertension diagnosis means the diagnosis description contains \u201chypertension\u201d (case-insensitive). Each matching claim is counted once, even if it has multiple diagnoses.",
+     "Amounts are net claim amounts in SGD (claim_amt_sgd). Excluded claims with visit dates after 2026-11-30."
+    ]
+   }
+  },
+  {
+   "id": "s01",
+   "question": "By how much, in SGD, did the approved claim amount change from September 2026 to October 2026?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.7,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     7205.34
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Approved claim amount increased by SGD 7,205.34 from September 2026 (SGD 143,867.74) to October 2026 (SGD 151,073.08).",
+    "tables": [
+     {
+      "columns": [
+       "september_2026_approved_amount_sgd",
+       "october_2026_approved_amount_sgd",
+       "change_october_minus_september_sgd"
+      ],
+      "rows": [
+       [
+        143867.74,
+        151073.08,
+        7205.34
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH monthly AS (\n  SELECT visit_month, SUM(claim_amt_sgd) AS approved_claim_amount_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date <= DATE '2026-11-30'\n    AND visit_date BETWEEN DATE '2026-09-01' AND DATE '2026-10-31'\n  GROUP BY visit_month\n), totals AS (\n  SELECT\n    COALESCE(MAX(approved_claim_amount_sgd) FILTER (WHERE visit_month = '2026-09'), 0) AS september_amount_sgd,\n    COALESCE(MAX(approved_claim_amount_sgd) FILTER (WHERE visit_month = '2026-10'), 0) AS october_amount_sgd\n  FROM monthly\n)\nSELECT\n  ROUND(september_amount_sgd, 2) AS september_2026_approved_amount_sgd,\n  ROUND(october_amount_sgd, 2) AS october_2026_approved_amount_sgd,\n  ROUND(october_amount_sgd - september_amount_sgd, 2) AS change_october_minus_september_sgd\nFROM totals"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest version per claim, and included approved claims only (is_approved).",
+     "Amounts are net claim amounts in SGD (claim_amt_sgd).",
+     "Months refer to visit_date; included claims dated through the as-of date, 2026-11-30.",
+     "Change is calculated as October amount minus September amount."
+    ]
+   }
+  },
+  {
+   "id": "s02",
+   "question": "Which provider had the largest increase in approved claim amount, in SGD, from Q2 2026 to Q3 2026?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 12.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Harbour Family Clinic 1",
+     2419.56
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Harbour Family Clinic 1 (provider_id 1) had the largest increase in approved claim amount: Q2 2026 was SGD 33,202.04, Q3 2026 was SGD 35,621.59, an increase of SGD 2,419.56.\n\nThe Unknown-provider bucket, excluded from the provider ranking, had 2,001 approved claims totaling SGD 164,780.26 in Q2 and 2,022 claims totaling SGD 163,225.90 in Q3.",
+    "tables": [
+     {
+      "columns": [
+       "provider_id",
+       "provider_name",
+       "q2_2026_approved_amount_sgd",
+       "q3_2026_approved_amount_sgd",
+       "increase_sgd"
+      ],
+      "rows": [
+       [
+        1,
+        "Harbour Family Clinic 1",
+        33202.04,
+        35621.59,
+        2419.56
+       ]
+      ]
+     },
+     {
+      "columns": [
+       "unknown_approved_claims_q2_2026",
+       "unknown_approved_amount_q2_sgd",
+       "unknown_approved_claims_q3_2026",
+       "unknown_approved_amount_q3_sgd"
+      ],
+      "rows": [
+       [
+        2001,
+        164780.26,
+        2022,
+        163225.9
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH provider_totals AS (\n  SELECT\n    provider_id,\n    provider_name,\n    COALESCE(SUM(claim_amt_sgd) FILTER (WHERE visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'), 0) AS q2_amount_sgd,\n    COALESCE(SUM(claim_amt_sgd) FILTER (WHERE visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'), 0) AS q3_amount_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date <= DATE '2026-11-30'\n    AND visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-09-30'\n    AND provider_id IS NOT NULL\n    AND provider_name <> 'Unknown'\n  GROUP BY provider_id, provider_name\n)\nSELECT\n  provider_id,\n  provider_name,\n  ROUND(q2_amount_sgd, 2) AS q2_2026_approved_amount_sgd,\n  ROUND(q3_amount_sgd, 2) AS q3_2026_approved_amount_sgd,\n  ROUND(q3_amount_sgd - q2_amount_sgd, 2) AS increase_sgd\nFROM provider_totals\nORDER BY increase_sgd DESC, provider_name ASC, provider_id ASC\nLIMIT 1",
+     "SELECT\n  COUNT(*) FILTER (WHERE visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30') AS unknown_approved_claims_q2_2026,\n  ROUND(COALESCE(SUM(claim_amt_sgd) FILTER (WHERE visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'), 0), 2) AS unknown_approved_amount_q2_sgd,\n  COUNT(*) FILTER (WHERE visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30') AS unknown_approved_claims_q3_2026,\n  ROUND(COALESCE(SUM(claim_amt_sgd) FILTER (WHERE visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'), 0), 2) AS unknown_approved_amount_q3_sgd\nFROM claim_latest\nWHERE is_approved\n  AND visit_date <= DATE '2026-11-30'\n  AND visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-09-30'\n  AND (provider_id IS NULL OR provider_name = 'Unknown')"
+    ],
+    "assumptions": [
+     "Used claim_latest (the latest version per claim) and approved claims only (is_approved).",
+     "Compared claim visit dates in Q2 2026 (2026-04-01 through 2026-06-30) with Q3 2026 (2026-07-01 through 2026-09-30), inclusive; excluded visit dates after 2026-11-30.",
+     "Used net claim_amt_sgd amounts; the SUM excludes any NULL SGD amounts.",
+     "Grouped providers by merged provider_id and excluded Unknown/missing provider attribution from the named-provider ranking. Unknown-provider counts and amounts are reported separately.",
+     "The increase is Q3 approved amount minus Q2 approved amount; a provider with no approved claims in a quarter is treated as having zero amount for that quarter."
+    ]
+   }
+  },
+  {
+   "id": "s03",
+   "question": "Compare last quarter with the quarter before it on approved claim count and claim amount.",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.6,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     5375,
+     435150.44
+    ],
+    [
+     5465,
+     446302.44
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "| Quarter | Approved claim count | Approved claim amount (SGD) |\n|---|---:|---:|\n| Quarter before last (2026-04-01 to 2026-06-30) | 5,375 | 435,150.44 |\n| Last quarter (2026-07-01 to 2026-09-30) | 5,465 | 446,302.44 |",
+    "tables": [
+     {
+      "columns": [
+       "quarter",
+       "approved_claim_count",
+       "approved_claim_amount_sgd"
+      ],
+      "rows": [
+       [
+        "Quarter before last (2026-04-01 to 2026-06-30)",
+        5375,
+        435150.44
+       ],
+       [
+        "Last quarter (2026-07-01 to 2026-09-30)",
+        5465,
+        446302.44
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT CASE WHEN visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' THEN 'Last quarter (2026-07-01 to 2026-09-30)' ELSE 'Quarter before last (2026-04-01 to 2026-06-30)' END AS quarter, COUNT(*) AS approved_claim_count, ROUND(SUM(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-09-30' GROUP BY CASE WHEN visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' THEN 'Last quarter (2026-07-01 to 2026-09-30)' ELSE 'Quarter before last (2026-04-01 to 2026-06-30)' END ORDER BY MIN(visit_date)"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest-version row per claim) and counted approved claims only (is_approved).",
+     "Applied the date windows to visit_date, inclusive: last quarter is 2026-07-01 through 2026-09-30; the quarter before it is 2026-04-01 through 2026-06-30. Excluded future visit dates after 2026-11-30.",
+     "Reported net claim amount in SGD (claim_amt_sgd). Claims whose latest version was loaded after the as-of date remain included, consistent with the latest-version rule."
+    ]
+   }
+  },
+  {
+   "id": "s04",
+   "question": "For last month's approved claims, how many days passed on average between the visit and the approval?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 4.8,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     7.16
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "For approved claims with visit dates in last month, the average time from visit to approval was **7.16 calendar days**, across **1,775 claims**.",
+    "tables": [
+     {
+      "columns": [
+       "avg_days_visit_to_approval",
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        7.16,
+        1775
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT ROUND(AVG(date_diff('day', visit_date, CAST(approved_on AS DATE))), 2) AS avg_days_visit_to_approval, COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest row per claim, and approved claims only (is_approved).",
+     "Applied last month as the inclusive visit_date window 2026-10-01 through 2026-10-31; excluded visit dates after the as-of date 2026-11-30.",
+     "Measured elapsed calendar days using date_diff between visit_date and the calendar date of approved_on, ignoring time of day."
+    ]
+   }
+  },
+  {
+   "id": "s05",
+   "question": "What share of last quarter's visits were injury visits?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.8,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     11.73
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Injury visits were 11.73% of approved visits last quarter (641 of 5,465).",
+    "tables": [
+     {
+      "columns": [
+       "injury_visits",
+       "approved_visits",
+       "injury_share_pct"
+      ],
+      "rows": [
+       [
+        641,
+        5465,
+        11.73
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT\n  count(*) FILTER (WHERE visit_type = 'Injury') AS injury_visits,\n  count(*) AS approved_visits,\n  round(100.0 * count(*) FILTER (WHERE visit_type = 'Injury') / NULLIF(count(*), 0), 2) AS injury_share_pct\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n  AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used claim_latest, counting one row per claim as one visit.",
+     "Included approved claims only (is_approved = true).",
+     "Last quarter means July 1 through September 30, 2026, inclusive, by visit_date; excluded visits after the as-of date of November 30, 2026.",
+     "Injury visits are claims with visit_type = 'Injury'; the denominator includes all approved visit types."
+    ]
+   }
+  },
+  {
+   "id": "s06",
+   "question": "How many providers had no approved claims at all last month?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.6,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     122
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "122 providers had no approved claims last month.",
+    "tables": [
+     {
+      "columns": [
+       "providers_with_no_approved_claims_last_month"
+      ],
+      "rows": [
+       [
+        122
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS providers_with_no_approved_claims_last_month\nFROM provider_dim p\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM claim_latest c\n  WHERE c.provider_id = p.provider_id\n    AND c.is_approved\n    AND c.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n    AND c.visit_date <= DATE '2026-11-30'\n)"
+    ],
+    "assumptions": [
+     "Counted real providers from provider_dim, which merges duplicate provider records; unmatched claims with Unknown provider attribution are not providers.",
+     "Used claim_latest (one latest row per claim), approved status (is_approved), and visit_date from October 1 through October 31, 2026, inclusive. Excluded visits after the as-of date, November 30, 2026."
+    ]
+   }
+  },
+  {
+   "id": "s08",
+   "question": "Which country had the highest average claim size last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.6,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "SG",
+     86.56
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Singapore (SG) had the highest average approved claim size last quarter, at SGD 86.56 across 1,378 claims. The Unknown-country bucket contains 2,022 approved claims totaling SGD 163,225.90; Unknown was excluded from the country ranking.",
+    "tables": [
+     {
+      "columns": [
+       "country_code",
+       "approved_claim_count",
+       "average_claim_size_sgd"
+      ],
+      "rows": [
+       [
+        "SG",
+        1378,
+        86.56
+       ]
+      ]
+     },
+     {
+      "columns": [
+       "country_code",
+       "approved_claim_count",
+       "approved_claim_amount_sgd",
+       "average_claim_size_sgd"
+      ],
+      "rows": [
+       [
+        "Unknown",
+        2022,
+        163225.9,
+        80.72
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT country_code, COUNT(*) AS approved_claim_count, ROUND(AVG(claim_amt_sgd), 2) AS average_claim_size_sgd\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n  AND visit_date <= DATE '2026-11-30'\nGROUP BY country_code\nORDER BY CASE WHEN country_code = 'Unknown' THEN 1 ELSE 0 END, average_claim_size_sgd DESC, country_code\nLIMIT 1",
+     "SELECT country_code, COUNT(*) AS approved_claim_count, ROUND(SUM(claim_amt_sgd), 2) AS approved_claim_amount_sgd, ROUND(AVG(claim_amt_sgd), 2) AS average_claim_size_sgd\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n  AND visit_date <= DATE '2026-11-30'\n  AND country_code = 'Unknown'\nGROUP BY country_code"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest version per claim, and approved claims only (is_approved).",
+     "\u201cLast quarter\u201d means 2026-07-01 through 2026-09-30 inclusive, filtered on visit_date; claims dated after 2026-11-30 were excluded.",
+     "Average claim size is total net claim_amt_sgd divided by approved claim count, in SGD.",
+     "Country is the provider's country_code. Unknown is retained as a bucket for disclosure but excluded from ranking countries."
+    ]
+   }
+  },
+  {
+   "id": "s11",
+   "question": "For each country, what percentage of last quarter's approved claims had also been rejected at some point?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "ID",
+     9.33
+    ],
+    [
+     "MY",
+     11.23
+    ],
+    [
+     "SG",
+     10.96
+    ],
+    [
+     "Unknown",
+     9.64
+    ],
+    [
+     "VN",
+     10.96
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Among last quarter\u2019s approved claims, the percentage also marked rejected was: ID 9.33% (85 of 911); MY 11.23% (104 of 926); SG 10.96% (151 of 1,378); Unknown 9.64% (195 of 2,022); and VN 10.96% (25 of 228).",
+    "tables": [
+     {
+      "columns": [
+       "country_code",
+       "approved_claims",
+       "approved_and_rejected_claims",
+       "pct_approved_claims_also_rejected"
+      ],
+      "rows": [
+       [
+        "ID",
+        911,
+        85,
+        9.33
+       ],
+       [
+        "MY",
+        926,
+        104,
+        11.23
+       ],
+       [
+        "SG",
+        1378,
+        151,
+        10.96
+       ],
+       [
+        "Unknown",
+        2022,
+        195,
+        9.64
+       ],
+       [
+        "VN",
+        228,
+        25,
+        10.96
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT country_code, count(*) AS approved_claims, count(*) FILTER (WHERE is_rejected) AS approved_and_rejected_claims, round(100.0 * count(*) FILTER (WHERE is_rejected) / NULLIF(count(*), 0), 2) AS pct_approved_claims_also_rejected FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' GROUP BY country_code ORDER BY country_code"
+    ],
+    "assumptions": [
+     "Used claim_latest, one row per claim, and the last quarter window of 2026-07-01 through 2026-09-30 inclusive, applied to visit_date; excluded any visit_date after 2026-11-30.",
+     "Denominator is approved claims (is_approved = true); numerator is those approved claims also marked rejected by is_rejected on the latest version. A claim may be both approved and rejected.",
+     "Country is the provider country_code; retained Unknown as its own group. Percentages are rounded to two decimal places."
+    ]
+   }
+  },
+  {
+   "id": "s12",
+   "question": "What are the top 3 diagnoses by claim amount last month?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.5,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Acute upper respiratory infection - variant 1",
+     16196.74
+    ],
+    [
+     "Essential hypertension - variant 1",
+     8977.36
+    ],
+    [
+     "Type 2 diabetes - variant 1",
+     7382.21
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Top 3 diagnoses by claim amount last month (2026-10), based on approved claims:\n\n| ICD code | Diagnosis | Claim amount (SGD) | Approved claims |\n|---|---|---:|---:|\n| X001 | Acute upper respiratory infection - variant 1 | 16196.74 | 195 |\n| X002 | Essential hypertension - variant 1 | 8977.36 | 111 |\n| X003 | Type 2 diabetes - variant 1 | 7382.21 | 87 |",
+    "tables": [
+     {
+      "columns": [
+       "icd_code",
+       "diagnosis",
+       "claim_amount_sgd",
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        "X001",
+        "Acute upper respiratory infection - variant 1",
+        16196.74,
+        195
+       ],
+       [
+        "X002",
+        "Essential hypertension - variant 1",
+        8977.36,
+        111
+       ],
+       [
+        "X003",
+        "Type 2 diabetes - variant 1",
+        7382.21,
+        87
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT ci.icd_code, ci.diagnosis, round(sum(cl.claim_amt_sgd), 2) AS claim_amount_sgd, count(DISTINCT cl.claim_id) AS approved_claim_count FROM claim_latest cl JOIN claim_icd ci ON ci.claim_id = cl.claim_id WHERE cl.is_approved AND cl.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND cl.visit_date <= DATE '2026-11-30' GROUP BY ci.icd_code, ci.diagnosis ORDER BY claim_amount_sgd DESC, ci.icd_code LIMIT 3"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest-version row per claim) and approved claims only.",
+     "Last month means visit dates 2026-10-01 through 2026-10-31 inclusive; claims with visit dates after 2026-11-30 are excluded.",
+     "Claim amount is net amount in SGD (claim_amt_sgd).",
+     "A claim can have multiple diagnoses, so diagnosis groups overlap and amounts by diagnosis must not be added as a total. Claim counts are distinct within each diagnosis."
+    ]
+   }
+  },
+  {
+   "id": "s13",
+   "question": "What was the total drug cost in SGD last month, split by drug type?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 8.7,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Generic",
+     42824.28
+    ],
+    [
+     "Proprietary",
+     28171.79
+    ],
+    [
+     "Unknown",
+     3113.54
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Approved claims\u2019 drug costs for last month (2026-10-01 through 2026-10-31), split by drug type:\n\n| Drug type | Total drug cost (SGD) |\n|---|---:|\n| Generic | 42,824.28 |\n| Proprietary | 28,171.79 |\n| Unknown | 3,113.54 |",
+    "tables": [
+     {
+      "columns": [
+       "drug_type",
+       "total_drug_cost_sgd",
+       "lines_without_usable_rate"
+      ],
+      "rows": [
+       [
+        "Generic",
+        42824.28,
+        0
+       ],
+       [
+        "Proprietary",
+        28171.79,
+        0
+       ],
+       [
+        "Unknown",
+        3113.54,
+        0
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT d.drug_type, ROUND(SUM(CASE WHEN cl.currency_rate IS NOT NULL AND cl.currency_rate <> 0 THEN CAST(cd.cost AS DOUBLE) / cl.currency_rate END), 2) AS total_drug_cost_sgd, COUNT(*) FILTER (WHERE cl.currency_rate IS NULL OR cl.currency_rate = 0) AS lines_without_usable_rate FROM claim_drug cd JOIN claim_latest cl ON cl.claim_id = cd.claim_id JOIN drug_dim d ON d.drug_id = cd.drug_id WHERE cl.is_approved AND cl.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND cl.visit_date <= DATE '2026-11-30' GROUP BY d.drug_type ORDER BY d.drug_type"
+    ],
+    "assumptions": [
+     "Used claim_drug line costs joined to claim_latest and drug_dim; the latest claim version is used.",
+     "Included approved claims only and applied the last-month window to visit_date, inclusive of 2026-10-01 through 2026-10-31; visits after the as-of date are excluded.",
+     "Converted each local-currency drug line cost to SGD by dividing by the claim's currency_rate. All included lines had a usable rate.",
+     "Kept Unknown as a drug-type group. Drug line costs are line-level and do not add up to claim amounts."
+    ]
+   }
+  },
+  {
+   "id": "s14",
+   "question": "How many of last month's approved claims had more than one diagnosis?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     560
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "560 of last month\u2019s approved claims had more than one diagnosis.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claims_with_multiple_diagnoses"
+      ],
+      "rows": [
+       [
+        560
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH diagnoses_per_claim AS (\n  SELECT claim_id, COUNT(*) AS diagnosis_count\n  FROM claim_icd\n  GROUP BY claim_id\n)\nSELECT COUNT(*) AS approved_claims_with_multiple_diagnoses\nFROM claim_latest cl\nJOIN diagnoses_per_claim d USING (claim_id)\nWHERE cl.is_approved\n  AND cl.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND cl.visit_date <= DATE '2026-11-30'\n  AND d.diagnosis_count > 1"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest-version row per claim) and the default approved-claims definition, is_approved = true.",
+     "\u201cLast month\u201d means visits from 2026-10-01 through 2026-10-31 inclusive; excluded visits after the as-of date, 2026-11-30.",
+     "Counted a claim once when it had more than one distinct diagnosis row in claim_icd."
+    ]
+   }
+  },
+  {
+   "id": "s15",
+   "question": "What was the largest single claim in each country last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 8.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "ID",
+     595.45
+    ],
+    [
+     "MY",
+     877.07
+    ],
+    [
+     "SG",
+     1630.39
+    ],
+    [
+     "Unknown",
+     929.11
+    ],
+    [
+     "VN",
+     372.7
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Largest approved claim by provider country last quarter (net SGD). The Unknown country bucket is included; the claim ID and amount are shown for each country.",
+    "tables": [
+     {
+      "columns": [
+       "country_code",
+       "claim_id",
+       "largest_claim_sgd"
+      ],
+      "rows": [
+       [
+        "ID",
+        56868,
+        595.45
+       ],
+       [
+        "MY",
+        29914,
+        877.07
+       ],
+       [
+        "SG",
+        14445,
+        1630.39
+       ],
+       [
+        "Unknown",
+        34972,
+        929.11
+       ],
+       [
+        "VN",
+        13006,
+        372.7
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH eligible AS (\n  SELECT claim_id, country_code, claim_amt_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n    AND visit_date <= DATE '2026-11-30'\n    AND claim_amt_sgd IS NOT NULL\n), maxima AS (\n  SELECT country_code, MAX(claim_amt_sgd) AS largest_claim_sgd\n  FROM eligible\n  GROUP BY country_code\n)\nSELECT e.country_code,\n       e.claim_id,\n       ROUND(e.claim_amt_sgd, 2) AS largest_claim_sgd\nFROM eligible e\nJOIN maxima m\n  ON e.country_code = m.country_code\n AND e.claim_amt_sgd = m.largest_claim_sgd\nORDER BY e.country_code, e.claim_id"
+    ],
+    "assumptions": [
+     "Used claim_latest, the latest version of each claim, and approved claims only.",
+     "Last quarter means the complete calendar quarter before the current quarter; the window is based on visit_date. Claims dated after the as-of date were excluded.",
+     "Largest claim means the maximum net claim amount converted to SGD (claim_amt_sgd). Claims with a NULL SGD amount were excluded.",
+     "Unknown is retained as a country bucket. If multiple claims tie for the maximum in a country, all tied claims are returned."
+    ]
+   }
+  },
+  {
+   "id": "s17",
+   "question": "How many approved claims were there in the first half of 2026?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 4.9,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     10495
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "There were 10,495 approved claims in the first half of 2026.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        10495
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-06-30' AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest version per claim, and counted claims marked approved (approved_on set and not voided).",
+     "Applied the visit_date window 2026-01-01 through 2026-06-30 inclusive, excluding visits after the as-of date 2026-11-30.",
+     "Claims whose latest version was loaded after the as-of date are still included, per the latest-version rule."
+    ]
+   }
+  },
+  {
+   "id": "s18",
+   "question": "How many approved claims have there been this month so far?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 6.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     1831
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "There have been 1,831 approved claims this month so far.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        1831
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-11-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "\u201cThis month so far\u201d means visits from 2026-11-01 through 2026-11-30, inclusive, using visit_date.",
+     "Approved claims are those marked is_approved in claim_latest; claims with visit dates after 2026-11-30 are excluded."
+    ]
+   }
+  },
+  {
+   "id": "s19",
+   "question": "What was the approved claim amount in Q1 2026 compared with Q1 2025?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.6,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     443910.22
+    ],
+    [
+     425143.0
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Approved claim amount was SGD 425,143.00 in Q1 2026, compared with SGD 443,910.22 in Q1 2025.",
+    "tables": [
+     {
+      "columns": [
+       "quarter",
+       "approved_claim_amount_sgd"
+      ],
+      "rows": [
+       [
+        "Q1 2026",
+        425143.0
+       ],
+       [
+        "Q1 2025",
+        443910.22
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT CASE WHEN visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-03-31' THEN 'Q1 2026' ELSE 'Q1 2025' END AS quarter, round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND (visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-03-31' OR visit_date BETWEEN DATE '2025-01-01' AND DATE '2025-03-31') GROUP BY quarter ORDER BY quarter DESC"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest row per claim) and included approved claims only (is_approved = true).",
+     "Q1 means January 1 through March 31 inclusive; the date window is based on visit_date.",
+     "Amounts are net claim amounts converted to SGD (claim_amt_sgd). Claims with visit_date after 2026-11-30 are excluded."
+    ]
+   }
+  },
+  {
+   "id": "s20",
+   "question": "Which day of the week has had the most visits this year?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.2,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Wednesday",
+     2853
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Wednesday had the most visits this year, with 2,853 approved visits.",
+    "tables": [
+     {
+      "columns": [
+       "day_of_week",
+       "approved_visits"
+      ],
+      "rows": [
+       [
+        "Wednesday",
+        2853
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT strftime(visit_date, '%A') AS day_of_week, count(*) AS approved_visits FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' GROUP BY day_of_week ORDER BY approved_visits DESC, day_of_week LIMIT 1"
+    ],
+    "assumptions": [
+     "Used the year-to-date window of January 1 through November 30, 2026, inclusive, based on visit_date.",
+     "Counted approved claims only; each claim represents one visit.",
+     "Excluded visits dated after November 30, 2026."
+    ]
+   }
+  },
+  {
+   "id": "s23",
+   "question": "Compare the average claim size at dental providers in Malaysia and in Singapore this year.",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "MY",
+     87.92
+    ],
+    [
+     "SG",
+     81.23
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "For approved dental-provider claims this year to date, Malaysia (MY) had an average claim size of SGD 87.92 across 237 claims, compared with SGD 81.23 across 427 claims in Singapore (SG).",
+    "tables": [
+     {
+      "columns": [
+       "country_code",
+       "approved_claim_count",
+       "average_claim_size_sgd"
+      ],
+      "rows": [
+       [
+        "MY",
+        237,
+        87.92
+       ],
+       [
+        "SG",
+        427,
+        81.23
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT country_code, count(*) AS approved_claim_count, round(sum(claim_amt_sgd) / count(*), 2) AS average_claim_size_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-11-30' AND visit_date <= DATE '2026-11-30' AND provider_type = 'Dental' AND country_code IN ('MY', 'SG') GROUP BY country_code ORDER BY country_code"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest row per claim, and included approved claims only.",
+     "Year to date means visit dates from 2026-01-01 through 2026-11-30, inclusive; claims with visit dates after the as-of date are excluded.",
+     "Dental means provider_type = 'Dental'; Malaysia and Singapore are country_code MY and SG respectively.",
+     "Average claim size is total net claim_amt_sgd divided by approved claim count; amounts are in SGD."
+    ]
+   }
+  },
+  {
+   "id": "s24",
+   "question": "How much did we pay out last month?",
+   "as_of": "2026-11-30",
+   "passed": false,
+   "reason": "status 'unanswerable', expected 'answered'",
+   "seconds": 4.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     151073.08
+    ]
+   ],
+   "output": {
+    "status": "unanswerable",
+    "answer": "The database does not contain payment or disbursement records, so I can\u2019t determine how much was actually paid out last month. It can report the net amount of approved claims for visits last month, but that is not necessarily the amount paid out.",
+    "tables": [],
+    "sql": [],
+    "assumptions": []
+   }
+  },
+  {
+   "id": "s25",
+   "question": "Within Singapore only, rank the regions by number of visits last month.",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 4.9,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "West",
+     106
+    ],
+    [
+     "Central",
+     94
+    ],
+    [
+     "South",
+     87
+    ],
+    [
+     "East",
+     75
+    ],
+    [
+     "North",
+     47
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Rank of regions in Singapore by visit count last month (2026-10): see the table. The figures count approved visits.",
+    "tables": [
+     {
+      "columns": [
+       "region",
+       "approved_visits"
+      ],
+      "rows": [
+       [
+        "West",
+        106
+       ],
+       [
+        "Central",
+        94
+       ],
+       [
+        "South",
+        87
+       ],
+       [
+        "East",
+        75
+       ],
+       [
+        "North",
+        47
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT region, count(*) AS approved_visits FROM claim_latest WHERE is_approved AND country_code = 'SG' AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' GROUP BY region ORDER BY approved_visits DESC, region LIMIT 100"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest-version row per claim) and the default approved-claims-only rule; one claim represents one visit.",
+     "Filtered to provider country_code = 'SG' and visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded any visit dates after 2026-11-30.",
+     "Retained the Unknown region bucket if present; none appeared in this result."
+    ]
+   }
+  },
+  {
+   "id": "s26",
+   "question": "What is the total approved claim amount in SGD for the last 3 months, by month?",
+   "as_of": "2026-01-10",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "2025-10",
+     148572.57
+    ],
+    [
+     "2025-11",
+     141259.43
+    ],
+    [
+     "2025-12",
+     146838.27
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Approved claim amounts in SGD by month for the last 3 complete calendar months:\n\n| Visit month | Approved claim amount (SGD) |\n|---|---:|\n| 2025-10 | 148,572.57 |\n| 2025-11 | 141,259.43 |\n| 2025-12 | 146,838.27 |",
+    "tables": [
+     {
+      "columns": [
+       "visit_month",
+       "approved_claim_amount_sgd"
+      ],
+      "rows": [
+       [
+        "2025-10",
+        148572.57
+       ],
+       [
+        "2025-11",
+        141259.43
+       ],
+       [
+        "2025-12",
+        146838.27
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT visit_month, round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2025-10-01' AND DATE '2025-12-31' AND visit_date <= DATE '2026-01-10' GROUP BY visit_month ORDER BY visit_month"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest version per claim), filtered to approved claims only, and summed net claim_amt_sgd amounts.",
+     "\u201cLast 3 months\u201d means the three complete calendar months before January 2026: 2025-10-01 through 2025-12-31; time window applies to visit_date.",
+     "Excluded visits dated after the as-of date, 2026-01-10."
+    ]
+   }
+  },
+  {
+   "id": "s27",
+   "question": "Of the claim records loaded in October 2026, what percentage were edits to existing claims rather than new claims?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 9.3,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     27.86
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Of the claim records loaded in October 2026, 27.86% were edits to existing claims (951 of 3,413 records).",
+    "tables": [
+     {
+      "columns": [
+       "claim_records_loaded_october",
+       "edits_to_existing_claims",
+       "new_claim_records",
+       "percent_edits"
+      ],
+      "rows": [
+       [
+        3413,
+        951,
+        2462,
+        27.86
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH versioned_records AS (\n  SELECT claim_id, loaded_at,\n         row_number() OVER (PARTITION BY claim_id ORDER BY loaded_at) AS version_order\n  FROM claim\n), october_records AS (\n  SELECT *\n  FROM versioned_records\n  WHERE CAST(loaded_at AS DATE) BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n)\nSELECT count(*) AS claim_records_loaded_october,\n       count(*) FILTER (WHERE version_order > 1) AS edits_to_existing_claims,\n       count(*) FILTER (WHERE version_order = 1) AS new_claim_records,\n       round(100.0 * count(*) FILTER (WHERE version_order > 1) / NULLIF(count(*), 0), 2) AS percent_edits\nFROM october_records"
+    ],
+    "assumptions": [
+     "Used the raw claim table because this is a load-history question; each row is a loaded claim record/version.",
+     "Classified a record as an edit if it was not the first loaded version for its claim_id across the full load history; otherwise it was a new claim record.",
+     "Used loaded_at dates from 2026-10-01 through 2026-10-31, inclusive."
+    ]
+   }
+  },
+  {
+   "id": "s28",
+   "question": "How many approved claims last month were at providers with 'Hospital' in their name?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 4.7,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     288
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "There were 288 approved claims last month at providers whose names contain \u201cHospital\u201d.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        288
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS approved_claim_count\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND visit_date <= DATE '2026-11-30'\n  AND provider_name ILIKE '%Hospital%'"
+    ],
+    "assumptions": [
+     "Used claim_latest, one row per claim (latest version), and counted approved claims only (is_approved).",
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31 inclusive; claims with visit dates after 2026-11-30 are excluded.",
+     "Matched provider names case-insensitively when they contain the substring \u201cHospital\u201d."
+    ]
+   }
+  },
+  {
+   "id": "r01",
+   "question": "Among all claims with a visit last month, regardless of status, how many had their claim amount edited at least once after the first load (count a claim even if the amount was later changed back)?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 8.5,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     200
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "200 claims with a visit in last month had their claim amount edited at least once after the first load.",
+    "tables": [
+     {
+      "columns": [
+       "claims_with_amount_edited_after_first_load"
+      ],
+      "rows": [
+       [
+        200
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH cohort AS (\n    SELECT claim_id\n    FROM claim_latest\n    WHERE visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n      AND visit_date <= DATE '2026-11-30'\n),\nversioned AS (\n    SELECT c.claim_id,\n           c.claim_amt,\n           c.loaded_at,\n           row_number() OVER (PARTITION BY c.claim_id ORDER BY c.loaded_at ASC) AS load_rank\n    FROM claim c\n    JOIN cohort USING (claim_id)\n),\nfirst_load AS (\n    SELECT claim_id, claim_amt AS first_claim_amt, loaded_at AS first_loaded_at\n    FROM versioned\n    WHERE load_rank = 1\n),\nedited AS (\n    SELECT DISTINCT f.claim_id\n    FROM first_load f\n    JOIN versioned v USING (claim_id)\n    WHERE v.loaded_at > f.first_loaded_at\n      AND v.claim_amt IS DISTINCT FROM f.first_claim_amt\n)\nSELECT count(*) AS claims_with_amount_edited_after_first_load\nFROM edited"
+    ],
+    "assumptions": [
+     "Last month means visit dates from 2026-10-01 through 2026-10-31, inclusive; claims with visit dates after 2026-11-30 are excluded.",
+     "The cohort is based on each claim\u2019s latest version, while edit history includes every raw claim version for that claim.",
+     "Regardless of status: no approval, rejection, or voiding filter was applied.",
+     "A claim counts if any version loaded after its first load had a claim_amt different from the first-loaded amount, even if the amount was later changed back. Amount comparisons use the claim\u2019s stored local-currency amount."
+    ]
+   }
+  },
+  {
+   "id": "r02",
+   "question": "Among claims with a visit last quarter, how many show as approved in an earlier stored version but are not approved in their latest version?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.3,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     156
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "156 claims with visits last quarter had at least one earlier stored version marked approved, but were not approved in their latest version.",
+    "tables": [
+     {
+      "columns": [
+       "claim_count"
+      ],
+      "rows": [
+       [
+        156
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(DISTINCT cl.claim_id) AS claim_count\nFROM claim_latest cl\nWHERE cl.visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n  AND cl.visit_date <= DATE '2026-11-30'\n  AND NOT cl.is_approved\n  AND EXISTS (\n    SELECT 1\n    FROM claim c\n    WHERE c.claim_id = cl.claim_id\n      AND c.loaded_at < cl.loaded_at\n      AND c.approved_on IS NOT NULL\n      AND c.voided_on IS NULL\n  )"
+    ],
+    "assumptions": [
+     "\u201cLast quarter\u201d means visit dates from 2026-07-01 through 2026-09-30, inclusive; visits after 2026-11-30 are excluded.",
+     "Used claim_latest for each claim\u2019s latest version and raw claim rows for version history. An earlier version means a row loaded before the latest version\u2019s loaded_at.",
+     "A version is approved when approved_on is set and voided_on is not set; rejection does not affect approval status.",
+     "Counted each claim once, even if multiple earlier versions were approved."
+    ]
+   }
+  },
+  {
+   "id": "r03",
+   "question": "For all claims with a visit last month, regardless of status, what is the average number of stored versions per claim?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     1.39
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "For claims with a visit last month, there were 1.39 stored versions per claim on average across 2,467 claims.",
+    "tables": [
+     {
+      "columns": [
+       "average_stored_versions_per_claim",
+       "claims_in_scope"
+      ],
+      "rows": [
+       [
+        1.39,
+        2467
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT ROUND(AVG(version_count), 2) AS average_stored_versions_per_claim, COUNT(*) AS claims_in_scope FROM claim_latest WHERE visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive.",
+     "Used the latest claim row\u2019s version_count for each claim; included claims regardless of status.",
+     "Excluded claims with visit dates after the as-of date, 2026-11-30."
+    ]
+   }
+  },
+  {
+   "id": "r04",
+   "question": "Among all claims with a visit last month, regardless of status, how many were first loaded more than 3 calendar days after the visit date?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 6.7,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     1022
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "1,022 claims with a visit in October 2026 were first loaded more than 3 calendar days after the visit date.",
+    "tables": [
+     {
+      "columns": [
+       "claim_count"
+      ],
+      "rows": [
+       [
+        1022
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH first_load AS (\n    SELECT claim_id, MIN(loaded_at) AS first_loaded_at\n    FROM claim\n    GROUP BY claim_id\n)\nSELECT COUNT(*) AS claim_count\nFROM claim_latest cl\nJOIN first_load fl USING (claim_id)\nWHERE cl.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND cl.visit_date <= DATE '2026-11-30'\n  AND date_diff('day', cl.visit_date, CAST(fl.first_loaded_at AS DATE)) > 3"
+    ],
+    "assumptions": [
+     "Used the inclusive last-month visit-date window, 2026-10-01 through 2026-10-31, and excluded visits after the as-of date 2026-11-30.",
+     "Used each claim\u2019s visit date from claim_latest and the earliest loaded_at across all raw claim versions to determine first load; each claim\u2019s full load history was included, regardless of when versions were loaded.",
+     "Compared calendar dates, not times of day: a claim qualifies when date_diff('day', visit_date, first-load date) is greater than 3.",
+     "Included claims regardless of approval, rejection, or void status."
+    ]
+   }
+  },
+  {
+   "id": "r05",
+   "question": "For all claims with a visit last quarter, regardless of status, that were edited at least once, how many days on average lie between the first and the last load?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.9,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     13.23
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "For 2,268 claims visited last quarter that had more than one load, the average interval from first to last load was 13.23 calendar days.",
+    "tables": [
+     {
+      "columns": [
+       "edited_claim_count",
+       "average_calendar_days_first_to_last_load"
+      ],
+      "rows": [
+       [
+        2268,
+        13.23
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH quarter_claims AS (\n    SELECT claim_id\n    FROM claim_latest\n    WHERE visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n      AND visit_date <= DATE '2026-11-30'\n), histories AS (\n    SELECT c.claim_id,\n           MIN(c.loaded_at) AS first_loaded_at,\n           MAX(c.loaded_at) AS last_loaded_at,\n           COUNT(*) AS version_count\n    FROM claim c\n    JOIN quarter_claims q USING (claim_id)\n    GROUP BY c.claim_id\n)\nSELECT COUNT(*) AS edited_claim_count,\n       ROUND(AVG(date_diff('day', CAST(first_loaded_at AS DATE), CAST(last_loaded_at AS DATE))), 2) AS average_calendar_days_first_to_last_load\nFROM histories\nWHERE version_count > 1"
+    ],
+    "assumptions": [
+     "\u201cLast quarter\u201d means July 1 through September 30, 2026, inclusive, based on visit_date; future visit dates are excluded.",
+     "Regardless of status means no approval, rejection, or voiding filter was applied.",
+     "An edited claim is one with more than one row in the raw claim load history. Its full history was used, including loads outside the visit-date window.",
+     "The interval is measured as the calendar-day difference between the dates of the first and last load timestamps, then averaged across eligible claims."
+    ]
+   }
+  },
+  {
+   "id": "k01",
+   "question": "What is the median claim size by provider type last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.2,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Dental",
+     62.89
+    ],
+    [
+     "GP",
+     60.16
+    ],
+    [
+     "Hospital",
+     59.74
+    ],
+    [
+     "Specialist",
+     58.03
+    ],
+    [
+     "Unknown",
+     59.15
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Median approved claim size by provider type last quarter (SGD): Dental $62.89 (227 claims); GP $60.16 (2,393); Hospital $59.74 (217); Specialist $58.03 (606); Unknown $59.15 (2,022).",
+    "tables": [
+     {
+      "columns": [
+       "provider_type",
+       "median_claim_size_sgd",
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        "Dental",
+        62.89,
+        227
+       ],
+       [
+        "GP",
+        60.16,
+        2393
+       ],
+       [
+        "Hospital",
+        59.74,
+        217
+       ],
+       [
+        "Specialist",
+        58.03,
+        606
+       ],
+       [
+        "Unknown",
+        59.15,
+        2022
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT provider_type, round(median(claim_amt_sgd), 2) AS median_claim_size_sgd, count(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' GROUP BY provider_type ORDER BY provider_type"
+    ],
+    "assumptions": [
+     "Used claim_latest, one row per claim, and the net claim amount in SGD (claim_amt_sgd).",
+     "Included approved claims only (is_approved), with visit_date from 2026-07-01 through 2026-09-30 inclusive; excluded future-dated visits beyond 2026-11-30.",
+     "Kept Unknown provider type as a group rather than excluding unattributed claims."
+    ]
+   }
+  },
+  {
+   "id": "k02",
+   "question": "What was the largest claim in each region last month?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 8.0,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Central",
+     447.62
+    ],
+    [
+     "East",
+     507.2
+    ],
+    [
+     "North",
+     599.91
+    ],
+    [
+     "South",
+     516.54
+    ],
+    [
+     "Unknown",
+     838.55
+    ],
+    [
+     "West",
+     617.6
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Largest approved claim by region last month (October 1\u201331, 2026):\n\n| Region | Claim ID | Visit date | Largest claim amount (SGD) |\n|---|---:|---|---:|\n| Central | 36312 | 2026-10-23 | 447.62 |\n| East | 25643 | 2026-10-23 | 507.20 |\n| North | 39223 | 2026-10-24 | 599.91 |\n| South | 44645 | 2026-10-04 | 516.54 |\n| Unknown | 6529 | 2026-10-09 | 838.55 |\n| West | 1475 | 2026-10-16 | 617.60 |",
+    "tables": [
+     {
+      "columns": [
+       "region",
+       "claim_id",
+       "visit_date",
+       "largest_claim_amount_sgd"
+      ],
+      "rows": [
+       [
+        "Central",
+        36312,
+        "2026-10-23",
+        447.62
+       ],
+       [
+        "East",
+        25643,
+        "2026-10-23",
+        507.2
+       ],
+       [
+        "North",
+        39223,
+        "2026-10-24",
+        599.91
+       ],
+       [
+        "South",
+        44645,
+        "2026-10-04",
+        516.54
+       ],
+       [
+        "Unknown",
+        6529,
+        "2026-10-09",
+        838.55
+       ],
+       [
+        "West",
+        1475,
+        "2026-10-16",
+        617.6
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH eligible AS (\n  SELECT claim_id, visit_date, region, claim_amt_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n    AND visit_date <= DATE '2026-11-30'\n    AND claim_amt_sgd IS NOT NULL\n), ranked AS (\n  SELECT *, RANK() OVER (PARTITION BY region ORDER BY claim_amt_sgd DESC) AS amount_rank\n  FROM eligible\n)\nSELECT region, claim_id, visit_date, ROUND(claim_amt_sgd, 2) AS largest_claim_amount_sgd\nFROM ranked\nWHERE amount_rank = 1\nORDER BY region, claim_id"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest-loaded version per claim.",
+     "Included approved claims only (is_approved).",
+     "Last month means October 1\u201331, 2026, using visit_date; excluded visits after the as-of date, 2026-11-30.",
+     "Largest claim amount means net claim_amt_sgd; claims with a NULL SGD amount were excluded.",
+     "Included Unknown as a region bucket. If multiple claims tied for the largest amount in a region, all tied claims would be reported."
+    ]
+   }
+  },
+  {
+   "id": "m01",
+   "question": "How many providers had more than 50 approved claims last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.0,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     11
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "11 providers had more than 50 approved claims last quarter.",
+    "tables": [
+     {
+      "columns": [
+       "providers_with_more_than_50_approved_claims"
+      ],
+      "rows": [
+       [
+        11
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH provider_counts AS (\n  SELECT provider_id, count(*) AS approved_claims\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n    AND visit_date <= DATE '2026-11-30'\n    AND provider_id IS NOT NULL\n    AND provider_name <> 'Unknown'\n  GROUP BY provider_id\n)\nSELECT count(*) AS providers_with_more_than_50_approved_claims\nFROM provider_counts\nWHERE approved_claims > 50"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest-version row per claim) and counted approved claims by visit_date from 2026-07-01 through 2026-09-30, inclusive; excluded visit dates after 2026-11-30.",
+     "Counted real providers by merged provider_id and excluded claims with Unknown/missing provider attribution from the provider count.",
+     "Provider duplicates in the raw provider table are merged in claim_latest; latest-version claims loaded after the as-of date remain included."
+    ]
+   }
+  },
+  {
+   "id": "m02",
+   "question": "How many providers had at least one approved claim in every one of the last 6 months?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.8,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     102
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "102 providers had at least one approved claim in each of the last 6 complete calendar months.",
+    "tables": [
+     {
+      "columns": [
+       "providers_with_approved_claims_in_each_of_last_6_months"
+      ],
+      "rows": [
+       [
+        102
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS providers_with_approved_claims_in_each_of_last_6_months\nFROM (\n  SELECT provider_id\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-05-01' AND DATE '2026-10-31'\n    AND visit_date <= DATE '2026-11-30'\n    AND provider_id IS NOT NULL\n  GROUP BY provider_id\n  HAVING COUNT(DISTINCT strftime(visit_date, '%Y-%m')) = 6\n) AS qualifying_providers"
+    ],
+    "assumptions": [
+     "Used claim_latest, the one-row-per-claim latest-version source; counted distinct real providers by provider_id, merging duplicate provider records.",
+     "Applied the approved-claim definition (is_approved) and filtered visit_date to the last 6 complete calendar months, 2026-05-01 through 2026-10-31, with visit_date no later than 2026-11-30.",
+     "Claims with missing provider attribution were excluded because they cannot be counted as providers."
+    ]
+   }
+  },
+  {
+   "id": "m03",
+   "question": "What percentage of last quarter's total approved claim amount came from the top 5 providers?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 11.9,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     20.05
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "The top 5 providers accounted for **20.05%** of last quarter\u2019s total approved claim amount. Their combined amount was **SGD 89,463.90**, out of **SGD 446,302.44** total. Unknown-provider claims contributed **SGD 163,225.90**; they were included in the total denominator but excluded from the top-5 ranking.",
+    "tables": [
+     {
+      "columns": [
+       "top_5_providers_amount_sgd",
+       "total_approved_amount_sgd",
+       "top_5_share_percent"
+      ],
+      "rows": [
+       [
+        89463.9,
+        446302.44,
+        20.05
+       ]
+      ]
+     },
+     {
+      "columns": [
+       "unknown_provider_approved_amount_sgd"
+      ],
+      "rows": [
+       [
+        163225.9
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH approved AS (\n  SELECT claim_id, provider_id, provider_name, claim_amt_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n    AND visit_date <= DATE '2026-11-30'\n), provider_totals AS (\n  SELECT provider_id, provider_name, SUM(claim_amt_sgd) AS amount_sgd\n  FROM approved\n  WHERE provider_name <> 'Unknown'\n  GROUP BY provider_id, provider_name\n), top_five AS (\n  SELECT amount_sgd\n  FROM provider_totals\n  ORDER BY amount_sgd DESC, provider_name, provider_id\n  LIMIT 5\n), totals AS (\n  SELECT SUM(claim_amt_sgd) AS total_approved_amount_sgd FROM approved\n)\nSELECT\n  ROUND((SELECT SUM(amount_sgd) FROM top_five), 2) AS top_5_providers_amount_sgd,\n  ROUND(total_approved_amount_sgd, 2) AS total_approved_amount_sgd,\n  ROUND(100.0 * (SELECT SUM(amount_sgd) FROM top_five) / NULLIF(total_approved_amount_sgd, 0), 2) AS top_5_share_percent\nFROM totals",
+     "SELECT\n  ROUND(SUM(claim_amt_sgd), 2) AS unknown_provider_approved_amount_sgd\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n  AND visit_date <= DATE '2026-11-30'\n  AND provider_name = 'Unknown'"
+    ],
+    "assumptions": [
+     "\u201cLast quarter\u201d means the complete calendar quarter from 2026-07-01 through 2026-09-30, based on visit_date; claims after the as-of date of 2026-11-30 are excluded.",
+     "Used claim_latest and approved claims only (is_approved = true); claims are grouped using merged provider identities and ranked by their summed claim amount in SGD.",
+     "Unknown is excluded from the provider ranking but included in total approved claim amount.",
+     "Summed claim_amt_sgd (net amounts); NULL SGD amounts from unusable conversion rates are omitted by SUM."
+    ]
+   }
+  },
+  {
+   "id": "m04",
+   "question": "Last month, how many approved claims did each active provider have on average, where active means at least one approved claim that month?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     3.99
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "In October 2026, the 278 active providers had an average of 3.99 approved claims each (1,110 approved claims total across those providers). A further 665 approved claims had no attributable provider and were excluded.",
+    "tables": [
+     {
+      "columns": [
+       "active_provider_count",
+       "approved_claims_for_active_providers",
+       "average_approved_claims_per_active_provider",
+       "approved_claims_with_unknown_provider"
+      ],
+      "rows": [
+       [
+        278,
+        1110,
+        3.99,
+        665
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH provider_counts AS (\n  SELECT provider_id, COUNT(*) AS approved_claims\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n    AND visit_date <= DATE '2026-11-30'\n    AND provider_id IS NOT NULL\n  GROUP BY provider_id\n), unknown_claims AS (\n  SELECT COUNT(*) AS approved_claims\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n    AND visit_date <= DATE '2026-11-30'\n    AND provider_id IS NULL\n)\nSELECT\n  COUNT(*) AS active_provider_count,\n  SUM(approved_claims) AS approved_claims_for_active_providers,\n  ROUND(AVG(approved_claims)::DOUBLE, 2) AS average_approved_claims_per_active_provider,\n  (SELECT approved_claims FROM unknown_claims) AS approved_claims_with_unknown_provider\nFROM provider_counts"
+    ],
+    "assumptions": [
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; claims with visit dates after the as-of date are excluded.",
+     "Use the latest claim version and approved status (`is_approved`).",
+     "An active provider is a real, identified provider with at least one approved claim in the month. Claims with unknown provider attribution are excluded from both the active-provider count and the average, and are reported separately.",
+     "Providers are identified using merged provider IDs, so duplicate raw provider entries count as one real provider."
+    ]
+   }
+  },
+  {
+   "id": "y01",
+   "question": "How many approved claims were there in the last 2 quarters?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 4.7,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     10840
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "There were 10,840 approved claims in the last 2 quarters (April 1\u2013September 30, 2026).",
+    "tables": [
+     {
+      "columns": [
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        10840
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS approved_claim_count\nFROM claim_latest\nWHERE is_approved\n  AND visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-09-30'\n  AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest version per claim, and counted approved claims (is_approved = true).",
+     "Applied the last 2 complete calendar quarters window to visit_date, inclusive of April 1 through September 30, 2026; excluded any visit dates after the as-of date."
+    ]
+   }
+  },
+  {
+   "id": "y02",
+   "question": "How did October 2026 compare with October 2025 on approved claim amount?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 11.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     148572.57
+    ],
+    [
+     151073.08
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Approved claim amount increased from SGD 148,572.57 in October 2025 (1,791 approved claims) to SGD 151,073.08 in October 2026 (1,775 approved claims). That is an increase of SGD 2,500.51, or 1.68%.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claims_oct_2025",
+       "approved_amount_sgd_oct_2025",
+       "approved_claims_oct_2026",
+       "approved_amount_sgd_oct_2026",
+       "amount_change_sgd",
+       "amount_change_percent"
+      ],
+      "rows": [
+       [
+        1791,
+        148572.57,
+        1775,
+        151073.08,
+        2500.51,
+        1.68
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH octobers AS (SELECT strftime(visit_date, '%Y-%m') AS visit_month, COUNT(*) AS approved_claim_count, SUM(claim_amt_sgd) AS amount_sgd FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-11-30' AND visit_date BETWEEN DATE '2025-10-01' AND DATE '2026-10-31' AND strftime(visit_date, '%m') = '10' GROUP BY 1) SELECT MAX(CASE WHEN visit_month = '2025-10' THEN approved_claim_count END) AS approved_claims_oct_2025, MAX(CASE WHEN visit_month = '2025-10' THEN ROUND(amount_sgd, 2) END) AS approved_amount_sgd_oct_2025, MAX(CASE WHEN visit_month = '2026-10' THEN approved_claim_count END) AS approved_claims_oct_2026, MAX(CASE WHEN visit_month = '2026-10' THEN ROUND(amount_sgd, 2) END) AS approved_amount_sgd_oct_2026, ROUND(MAX(CASE WHEN visit_month = '2026-10' THEN amount_sgd END) - MAX(CASE WHEN visit_month = '2025-10' THEN amount_sgd END), 2) AS amount_change_sgd, ROUND(100.0 * (MAX(CASE WHEN visit_month = '2026-10' THEN amount_sgd END) - MAX(CASE WHEN visit_month = '2025-10' THEN amount_sgd END)) / NULLIF(MAX(CASE WHEN visit_month = '2025-10' THEN amount_sgd END), 0), 2) AS amount_change_percent FROM octobers"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest-loaded row per claim, and included approved claims only (is_approved).",
+     "Compared claims by visit_date in the full calendar months October 2025 and October 2026; excluded future-dated visits after 2026-11-30.",
+     "Claim amount means net amount in SGD (claim_amt_sgd)."
+    ]
+   }
+  },
+  {
+   "id": "g01",
+   "question": "How many approved claims did Dr Gina Lee handle last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 6.6,
+   "expected_status": [
+    "answered",
+    "clarify"
+   ],
+   "expected_rows": [
+    [
+     57,
+     9
+    ],
+    [
+     70,
+     9
+    ],
+    [
+     119,
+     9
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "\u201cDr Gina Lee\u201d matches three distinct doctor records, so the approved-claim counts are reported separately by doctor ID for last quarter.",
+    "tables": [
+     {
+      "columns": [
+       "doctor_id",
+       "doctor_name",
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        57,
+        "Dr Gina Lee",
+        9
+       ],
+       [
+        70,
+        "Dr Gina Lee",
+        9
+       ],
+       [
+        119,
+        "Dr Gina Lee",
+        9
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT d.doctor_id, d.doctor_name, COUNT(c.claim_id) FILTER (WHERE c.is_approved) AS approved_claim_count\nFROM doctor_dim d\nLEFT JOIN claim_latest c\n  ON c.doctor_id = d.doctor_id\n AND c.is_approved\n AND c.visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30'\n AND c.visit_date <= DATE '2026-11-30'\nWHERE lower(d.doctor_name) = lower('Dr Gina Lee')\nGROUP BY d.doctor_id, d.doctor_name\nORDER BY d.doctor_id"
+    ],
+    "assumptions": [
+     "Used claim_latest, which keeps the latest loaded version per claim.",
+     "Approved means is_approved = true.",
+     "Last quarter means visits from 2026-07-01 through 2026-09-30, inclusive; the time window is based on visit_date and excludes visits after 2026-11-30.",
+     "Doctor names are not unique; each matching doctor_id is reported separately, without combining their counts."
+    ]
+   }
+  },
+  {
+   "id": "p01",
+   "question": "What percentage of last month's approved claim amount came from each provider type?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.6,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Dental",
+     2.83
+    ],
+    [
+     "GP",
+     44.37
+    ],
+    [
+     "Hospital",
+     3.66
+    ],
+    [
+     "Specialist",
+     11.64
+    ],
+    [
+     "Unknown",
+     37.5
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Last month's approved claim amount by provider type:\n\n| Provider type | Approved claim amount (SGD) | Share of total |\n|---|---:|---:|\n| GP | 67,034.77 | 44.37% |\n| Unknown | 56,657.24 | 37.50% |\n| Specialist | 17,585.81 | 11.64% |\n| Hospital | 5,524.98 | 3.66% |\n| Dental | 4,270.28 | 2.83% |",
+    "tables": [
+     {
+      "columns": [
+       "provider_type",
+       "approved_claim_amount_sgd",
+       "percentage_of_total"
+      ],
+      "rows": [
+       [
+        "GP",
+        67034.77,
+        44.37
+       ],
+       [
+        "Unknown",
+        56657.24,
+        37.5
+       ],
+       [
+        "Specialist",
+        17585.81,
+        11.64
+       ],
+       [
+        "Hospital",
+        5524.98,
+        3.66
+       ],
+       [
+        "Dental",
+        4270.28,
+        2.83
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH type_amounts AS (\n  SELECT provider_type, SUM(claim_amt_sgd) AS amount_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n    AND visit_date <= DATE '2026-11-30'\n  GROUP BY provider_type\n), total AS (\n  SELECT SUM(amount_sgd) AS total_amount_sgd FROM type_amounts\n)\nSELECT provider_type,\n       ROUND(amount_sgd, 2) AS approved_claim_amount_sgd,\n       ROUND(100.0 * amount_sgd / NULLIF(total_amount_sgd, 0), 2) AS percentage_of_total\nFROM type_amounts CROSS JOIN total\nORDER BY percentage_of_total DESC, provider_type"
+    ],
+    "assumptions": [
+     "Used claim_latest, the latest version per claim, and included approved claims only (is_approved).",
+     "Last month means visits dated 2026-10-01 through 2026-10-31, inclusive; future visit dates are excluded.",
+     "Claim amount means net amount converted to SGD (claim_amt_sgd).",
+     "Percentages are each provider type's approved amount divided by the total approved amount in this period.",
+     "Kept Unknown as a provider-type bucket rather than filtering it out."
+    ]
+   }
+  },
+  {
+   "id": "z01",
+   "question": "What are the three most common words in the diagnosis notes?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 2.9,
+   "expected_status": "declined",
+   "expected_rows": [],
+   "output": {
+    "status": "declined",
+    "answer": "I can\u2019t analyze diagnosis notes because they are sensitive free-text notes and are not available for reporting. I can report the most common coded diagnoses instead, if that would help.",
+    "tables": [],
+    "sql": [],
+    "assumptions": []
+   }
+  },
+  {
+   "id": "z02",
+   "question": "Show me the claim with the longest diagnosis note.",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 3.3,
+   "expected_status": "declined",
+   "expected_rows": [],
+   "output": {
+    "status": "declined",
+    "answer": "I can\u2019t retrieve or compare diagnosis notes because they are sensitive free-text notes and are not available for reporting.",
+    "tables": [],
+    "sql": [],
+    "assumptions": []
+   }
+  },
+  {
+   "id": "z03",
+   "question": "Export all of last month's claims to a CSV file on the server.",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 3.3,
+   "expected_status": "declined",
+   "expected_rows": [],
+   "output": {
+    "status": "declined",
+    "answer": "I can\u2019t export data or create a CSV file on the server. I can provide a read-only query for last month\u2019s claims if that would help.",
+    "tables": [],
+    "sql": [],
+    "assumptions": []
+   }
+  },
+  {
+   "id": "n01",
+   "question": "Which insurer employee approved the most claims last month?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 3.2,
+   "expected_status": "unanswerable",
+   "expected_rows": [],
+   "output": {
+    "status": "unanswerable",
+    "answer": "The claims data records when a claim was approved, but it does not identify the insurer employee who approved it. I can\u2019t determine who approved the most claims last month.",
+    "tables": [],
+    "sql": [],
+    "assumptions": []
+   }
+  },
+  {
+   "id": "n02",
+   "question": "What were the top reasons claims were rejected last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 3.1,
+   "expected_status": "unanswerable",
+   "expected_rows": [],
+   "output": {
+    "status": "unanswerable",
+    "answer": "The database records whether a claim was rejected, but it has no rejection-reason field. Diagnoses are not a reliable substitute for reasons for rejection, so I can\u2019t identify the top reasons for last quarter.",
+    "tables": [],
+    "sql": [],
+    "assumptions": []
+   }
+  },
+  {
+   "id": "e01",
+   "question": "What was the smallest claim in each country last month?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.6,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "ID",
+     7.59
+    ],
+    [
+     "MY",
+     10.88
+    ],
+    [
+     "SG",
+     6.64
+    ],
+    [
+     "Unknown",
+     5.84
+    ],
+    [
+     "VN",
+     13.34
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Smallest approved claim by provider country for last month (October 1\u201331, 2026), in SGD:\n\n| Country code | Claim ID | Visit date | Smallest claim amount (SGD) |\n|---|---:|---|---:|\n| ID | 39258 | 2026-10-18 | 7.59 |\n| MY | 3886 | 2026-10-16 | 10.88 |\n| SG | 58523 | 2026-10-04 | 6.64 |\n| Unknown | 28821 | 2026-10-11 | 5.84 |\n| VN | 48120 | 2026-10-16 | 13.34 |",
+    "tables": [
+     {
+      "columns": [
+       "country_code",
+       "claim_id",
+       "visit_date",
+       "smallest_claim_amt_sgd"
+      ],
+      "rows": [
+       [
+        "ID",
+        39258,
+        "2026-10-18",
+        7.59
+       ],
+       [
+        "MY",
+        3886,
+        "2026-10-16",
+        10.88
+       ],
+       [
+        "SG",
+        58523,
+        "2026-10-04",
+        6.64
+       ],
+       [
+        "Unknown",
+        28821,
+        "2026-10-11",
+        5.84
+       ],
+       [
+        "VN",
+        48120,
+        "2026-10-16",
+        13.34
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH eligible AS (\n  SELECT claim_id, visit_date, country_code, claim_amt_sgd\n  FROM claim_latest\n  WHERE is_approved\n    AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n    AND visit_date <= DATE '2026-11-30'\n    AND claim_amt_sgd IS NOT NULL\n), minima AS (\n  SELECT country_code, MIN(claim_amt_sgd) AS smallest_claim_amt_sgd\n  FROM eligible\n  GROUP BY country_code\n)\nSELECT e.country_code AS country_code,\n       e.claim_id,\n       e.visit_date,\n       ROUND(m.smallest_claim_amt_sgd, 2) AS smallest_claim_amt_sgd\nFROM eligible e\nJOIN minima m\n  ON e.country_code = m.country_code\n AND e.claim_amt_sgd = m.smallest_claim_amt_sgd\nORDER BY e.country_code, e.claim_id"
+    ],
+    "assumptions": [
+     "Used claim_latest, which has one row per claim and the latest loaded version.",
+     "Applied the default approved-claims-only rule and measured the visit_date in last month, October 1\u201331, 2026; excluded any future visit dates after November 30, 2026.",
+     "Compared net claim amounts in SGD (claim_amt_sgd), not gross amounts or local-currency amounts.",
+     "Country is the provider country_code; retained Unknown as a breakdown group.",
+     "Returned all claims tied at the minimum amount within each country. Claims with a null SGD amount were excluded because they cannot be compared as SGD amounts."
+    ]
+   }
+  },
+  {
+   "id": "e02",
+   "question": "What is the median claim size in each region last quarter?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 6.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     "Central",
+     61.29
+    ],
+    [
+     "East",
+     59.05
+    ],
+    [
+     "North",
+     59.08
+    ],
+    [
+     "South",
+     59.03
+    ],
+    [
+     "Unknown",
+     59.15
+    ],
+    [
+     "West",
+     60.71
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Median approved claim size by region for last quarter, in SGD:\n\n| Region | Median claim size (SGD) |\n|---|---:|\n| Central | 61.29 |\n| East | 59.05 |\n| North | 59.08 |\n| South | 59.03 |\n| Unknown | 59.15 |\n| West | 60.71 |",
+    "tables": [
+     {
+      "columns": [
+       "region",
+       "median_claim_size_sgd"
+      ],
+      "rows": [
+       [
+        "Central",
+        61.29
+       ],
+       [
+        "East",
+        59.05
+       ],
+       [
+        "North",
+        59.08
+       ],
+       [
+        "South",
+        59.03
+       ],
+       [
+        "Unknown",
+        59.15
+       ],
+       [
+        "West",
+        60.71
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT region, ROUND(MEDIAN(claim_amt_sgd), 2) AS median_claim_size_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-07-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30' AND claim_amt_sgd IS NOT NULL GROUP BY region ORDER BY region"
+    ],
+    "assumptions": [
+     "Used claim_latest, one latest-version row per claim; claim measures default to approved claims only.",
+     "\u201cLast quarter\u201d means the complete calendar quarter from 2026-07-01 through 2026-09-30, inclusive, by visit_date; excluded visits after the as-of date 2026-11-30.",
+     "Claim size means net claim_amt_sgd; calculated the median within each region and excluded claims with a NULL SGD amount.",
+     "Kept the Unknown region bucket as a row."
+    ]
+   }
+  },
+  {
+   "id": "e03",
+   "question": "How many approved claims were there in the last 3 quarters?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 5.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     15960
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "There were 15,960 approved claims in the last 3 complete calendar quarters (January 1\u2013September 30, 2026).",
+    "tables": [
+     {
+      "columns": [
+       "approved_claim_count"
+      ],
+      "rows": [
+       [
+        15960
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS approved_claim_count FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-01-01' AND DATE '2026-09-30' AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest version per claim) and counted approved claims only (is_approved = true).",
+     "Applied the date window to visit_date: January 1\u2013September 30, 2026, inclusive; excluded visits after the as-of date, November 30, 2026.",
+     "Latest-loaded claim version wins, including versions loaded after the as-of date."
+    ]
+   }
+  },
+  {
+   "id": "e04",
+   "question": "What was the approved claim amount in the quarter before last?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 4.7,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     435150.44
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "The approved claim amount in the quarter before last (2026-04-01 through 2026-06-30) was SGD 435,150.44.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claim_amount_sgd"
+      ],
+      "rows": [
+       [
+        435150.44
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT round(sum(claim_amt_sgd), 2) AS approved_claim_amount_sgd FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30' AND visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest version per claim) and approved claims only (is_approved).",
+     "Applied the quarter-before-last window to visit_date and excluded visits after the as-of date, 2026-11-30.",
+     "Claim amount means net claim amount in SGD (claim_amt_sgd)."
+    ]
+   }
+  },
+  {
+   "id": "e05",
+   "question": "Among last month's approved claims, how many were approved more than 5 days after the visit?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.9,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     486
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "There were 486 approved claims in last month that were approved more than 5 calendar days after the visit.",
+    "tables": [
+     {
+      "columns": [
+       "approved_claims_more_than_5_days_after_visit"
+      ],
+      "rows": [
+       [
+        486
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "SELECT COUNT(*) AS approved_claims_more_than_5_days_after_visit FROM claim_latest WHERE is_approved AND visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31' AND visit_date <= DATE '2026-11-30' AND date_diff('day', visit_date, CAST(approved_on AS DATE)) > 5"
+    ],
+    "assumptions": [
+     "Used claim_latest (one latest-version row per claim) and the standard approved definition: approved_on is set and voided_on is not set.",
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; excluded any visit dates after the as-of date 2026-11-30.",
+     "Calculated elapsed calendar days from visit_date to the date portion of approved_on; \u201cmore than 5 days\u201d means at least 6 calendar days."
+    ]
+   }
+  },
+  {
+   "id": "e06",
+   "question": "Among claims with a visit last month, how many carried a rejection in their first stored version but are approved now?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 8.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     361
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "361 claims with a visit last month had a rejection recorded in their first stored version and are approved now.",
+    "tables": [
+     {
+      "columns": [
+       "claim_count"
+      ],
+      "rows": [
+       [
+        361
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH first_load AS (\n  SELECT claim_id, MIN(loaded_at) AS first_loaded_at\n  FROM claim\n  GROUP BY claim_id\n), first_rejected AS (\n  SELECT DISTINCT c.claim_id\n  FROM claim c\n  JOIN first_load f\n    ON c.claim_id = f.claim_id\n   AND c.loaded_at = f.first_loaded_at\n  WHERE c.rejected_on IS NOT NULL\n)\nSELECT COUNT(*) AS claim_count\nFROM claim_latest cl\nJOIN first_rejected fr USING (claim_id)\nWHERE cl.visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND cl.visit_date <= DATE '2026-11-30'\n  AND cl.is_approved"
+    ],
+    "assumptions": [
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; claims with visit dates after the as-of date are excluded.",
+     "\u201cFirst stored version\u201d means the version with the earliest loaded_at timestamp. If multiple versions share that earliest timestamp, the claim qualifies if any has rejected_on set.",
+     "\u201cApproved now\u201d uses is_approved on claim_latest, the latest loaded version of each claim."
+    ]
+   }
+  },
+  {
+   "id": "e07",
+   "question": "What percentage of all claims with a visit last month, regardless of status, have been edited at least once?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 7.4,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     29.96
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "Of the 2,467 claims with visits last month, 739 had been edited at least once: 29.96%.",
+    "tables": [
+     {
+      "columns": [
+       "all_claims",
+       "edited_at_least_once",
+       "edited_percentage"
+      ],
+      "rows": [
+       [
+        2467,
+        739,
+        29.96
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH last_month_claims AS (\n    SELECT claim_id, version_count\n    FROM claim_latest\n    WHERE visit_date BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n      AND visit_date <= DATE '2026-11-30'\n), summary AS (\n    SELECT COUNT(*) AS all_claims,\n           COUNT(*) FILTER (WHERE version_count > 1) AS edited_at_least_once\n    FROM last_month_claims\n)\nSELECT all_claims,\n       edited_at_least_once,\n       ROUND(100.0 * edited_at_least_once / NULLIF(all_claims, 0), 2) AS edited_percentage\nFROM summary"
+    ],
+    "assumptions": [
+     "\u201cLast month\u201d means visit dates from 2026-10-01 through 2026-10-31, inclusive; claims with future visit dates are excluded.",
+     "Claims are identified using the latest version\u2019s visit_date, regardless of claim status. \u201cEdited at least once\u201d means the claim has more than one loaded version; its full version history is counted regardless of when versions were loaded."
+    ]
+   }
+  },
+  {
+   "id": "e08",
+   "question": "How many new claims were loaded for the first time in October 2026?",
+   "as_of": "2026-11-30",
+   "passed": true,
+   "reason": "",
+   "seconds": 8.1,
+   "expected_status": "answered",
+   "expected_rows": [
+    [
+     2462
+    ]
+   ],
+   "output": {
+    "status": "answered",
+    "answer": "2,462 claims were first loaded in October 2026.",
+    "tables": [
+     {
+      "columns": [
+       "new_claims_first_loaded_oct_2026"
+      ],
+      "rows": [
+       [
+        2462
+       ]
+      ]
+     }
+    ],
+    "sql": [
+     "WITH first_load AS (\n  SELECT claim_id, MIN(loaded_at) AS first_loaded_at\n  FROM claim\n  GROUP BY claim_id\n)\nSELECT COUNT(*) AS new_claims_first_loaded_oct_2026\nFROM first_load f\nJOIN claim_latest l USING (claim_id)\nWHERE CAST(f.first_loaded_at AS DATE) BETWEEN DATE '2026-10-01' AND DATE '2026-10-31'\n  AND l.visit_date <= DATE '2026-11-30'"
+    ],
+    "assumptions": [
+     "Used the raw claim history and counted each claim_id once, based on its earliest loaded_at across all versions; the first load date must fall from October 1 through October 31, 2026, inclusive.",
+     "Included claims regardless of status and excluded claims whose latest visit_date is after the as-of date, November 30, 2026."
     ]
    }
   }
