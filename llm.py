@@ -1,8 +1,12 @@
 """Minimal model client with tool calling (standard library only). Two wire formats:
 
-- LLM_API_STYLE=chat       POST {base}/chat/completions. Works with any OpenAI-compatible server (hosted or local).
 - LLM_API_STYLE=responses  POST {base}/responses. OpenAI's newer endpoint; needed when an OpenAI reasoning model
-                           should reason AND call function tools in the same loop.
+                           should reason AND call function tools in the same loop. Default for api.openai.com.
+- LLM_API_STYLE=chat       POST {base}/chat/completions. Works with any OpenAI-compatible server (hosted or local).
+                           Default for every other endpoint.
+
+Every setting has a default, so supplying an API key is enough: the key is read from LLM_API_KEY or, failing
+that, OPENAI_API_KEY; the endpoint defaults to OpenAI and the model to gpt-6-luna.
 
 Both return the same shape to the agent: {"content": str, "tool_calls": [{"id", "function": {"name", "arguments"}}]}.
 Configuration comes from environment variables (see .env.example). A .env file in the repository root is read
@@ -31,6 +35,10 @@ def load_env_file(path: str = _ENV_FILE) -> None:
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
+DEFAULT_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_MODEL = "gpt-6-luna"
+
+
 class LLMError(Exception):
     pass
 
@@ -38,17 +46,27 @@ class LLMError(Exception):
 class ChatClient:
     def __init__(self):
         load_env_file()
-        self.base_url = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-        self.api_key = os.environ.get("LLM_API_KEY", "")
-        self.model = os.environ.get("LLM_MODEL", "")
-        self.style = os.environ.get("LLM_API_STYLE", "chat").strip().lower() or "chat"
+        def setting(*names):
+            """First non-empty value among the named environment variables, else ''."""
+            return next((os.environ[n].strip() for n in names if os.environ.get(n, "").strip()), "")
+
+        self.base_url = (setting("LLM_BASE_URL", "OPENAI_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+        self.api_key = setting("LLM_API_KEY", "OPENAI_API_KEY")
+        self.model = setting("LLM_MODEL") or DEFAULT_MODEL
+        is_openai = "api.openai.com" in self.base_url
+        self.style = setting("LLM_API_STYLE").lower() or ("responses" if is_openai else "chat")
         if self.style not in ("chat", "responses"):
             raise LLMError("LLM_API_STYLE must be 'chat' or 'responses'.")
-        self.effort = os.environ.get("LLM_REASONING_EFFORT", "").strip().lower()
-        temperature = os.environ.get("LLM_TEMPERATURE", "").strip()
+        if "LLM_REASONING_EFFORT" in os.environ:            # set explicitly; empty means "the model's default"
+            self.effort = os.environ["LLM_REASONING_EFFORT"].strip().lower()
+        elif is_openai:                                     # OpenAI chat completions accepts function tools
+            self.effort = "low" if self.style == "responses" else "none"      # only with reasoning switched off
+        else:
+            self.effort = ""
+        temperature = setting("LLM_TEMPERATURE")
         self.temperature = float(temperature) if temperature else None
-        if not self.model:
-            raise LLMError("LLM_MODEL is not set. Copy .env.example to .env and fill it in.")
+        if is_openai and not self.api_key:
+            raise LLMError("no API key: set LLM_API_KEY (or OPENAI_API_KEY)")
 
     def chat(self, messages: list, tools: list, timeout: float) -> dict:
         """Return the assistant message: {"content": str, "tool_calls": [...]} (plus "_raw_output" for responses)."""

@@ -12,6 +12,8 @@ def main():
     try:
         res = execute_sql(a.sql)
         out = {"ok": True, "columns": res["columns"], "rows": res["rows"]}
+        if res.get("truncated"):                    # a row, cell or size cap cut the result
+            out["truncated"] = True
     except Exception as e:
         out = {"ok": False, "error": str(e)[:300]}
     print(to_json(out))

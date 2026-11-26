@@ -1,10 +1,13 @@
 """SQL safety guard: one read-only SELECT over an allow-list of relations, never the sensitive column.
 
-The guard is a parser-level check (sqlglot AST), not a prompt instruction. It fails closed: anything it does
-not positively recognise is rejected. It is one of three layers; see claims_db.py for the other two
-(the sensitive column is never loaded, and external access is switched off at the database level).
+The guard is a parser-level check (sqlglot AST), not a prompt instruction. Statements, relations and
+functions unknown to the parser are refused unless they are on an allow-list. It is the SECOND line of
+defence, not the first: a parser can disagree with the engine about what a statement means, so the
+guarantees that matter do not rest on it. See claims_db.py: the sensitive column is never loaded, the source
+file is detached, and external access is switched off inside the database.
 """
 import logging
+import unicodedata
 
 import sqlglot
 from sqlglot import exp
@@ -44,6 +47,7 @@ SAFE_ANONYMOUS_FUNCTIONS = {
     "group_concat", "list", "array_agg", "list_distinct", "list_sort", "array_length", "list_contains",
     "row_number", "rank", "dense_rank", "percent_rank", "cume_dist", "ntile", "lag", "lead", "first_value",
     "last_value", "nth_value", "range", "generate_series", "unnest",
+    "age", "entropy", "histogram", "element_at", "list_aggregate",
 }
 
 # Typed sqlglot functions that reach outside the query (files, environment, settings).
@@ -73,6 +77,7 @@ def check_sql(sql: str) -> str:
         raise GuardError("Refused: empty SQL.")
     if len(sql) > MAX_SQL_CHARS:
         raise GuardError("Refused: SQL statement is too long.")
+    _reject_unsafe_characters(sql)
     text = sql.strip().rstrip(";").strip()
     try:
         parsed = [s for s in sqlglot.parse(text, read="duckdb") if s is not None]
@@ -81,11 +86,15 @@ def check_sql(sql: str) -> str:
     if len(parsed) != 1:
         raise GuardError("Refused: exactly one statement is allowed.")
     root = parsed[0]
+    if isinstance(root, exp.Pivot):
+        raise GuardError(_PIVOT_HINT)
     if not isinstance(root, (exp.Select, exp.SetOperation)):
         raise GuardError("Refused: only SELECT statements are allowed (this database is read-only).")
 
     cte_names = {c.alias_or_name.lower() for c in root.find_all(exp.CTE)}
     for node in root.walk():
+        if isinstance(node, exp.Pivot):
+            raise GuardError(_PIVOT_HINT)
         if isinstance(node, _DENIED_NODE_CLASSES):
             raise GuardError(
                 f"Refused: {type(node).__name__.upper()} is not allowed; only plain SELECT statements can run.")
@@ -96,6 +105,24 @@ def check_sql(sql: str) -> str:
         if isinstance(node, exp.Func):
             _check_function(node)
     return text
+
+
+_PIVOT_HINT = ("Refused: PIVOT / UNPIVOT is not supported here. Use conditional aggregation instead, "
+               "for example sum(x) FILTER (WHERE col = 'a') AS a.")
+
+# Characters the two parsers disagree on. DuckDB reads zero-width and exotic space characters as white space,
+# sqlglot reads them as part of a name, so "a<ZWSP>FROM<ZWSP>t" would be checked as one harmless column name
+# and then executed as "a FROM t". Any such character is refused before parsing.
+_UNSAFE_CATEGORIES = {"Cc", "Cf", "Zs", "Zl", "Zp", "Co", "Cs", "Cn"}
+
+
+def _reject_unsafe_characters(sql: str) -> None:
+    for ch in sql:
+        if ch in " \t\n\r":
+            continue
+        if unicodedata.category(ch) in _UNSAFE_CATEGORIES:
+            raise GuardError(f"Refused: the SQL contains an invisible or non-standard space character "
+                             f"(U+{ord(ch):04X}). Use plain spaces.")
 
 
 def _check_table(t: exp.Table, cte_names: set) -> None:

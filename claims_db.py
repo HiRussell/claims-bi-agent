@@ -8,7 +8,8 @@ What happens on every call (each call is independent, nothing is cached between 
 2. The source file is detached. From here on nothing can reach it, so the source data cannot be changed.
 3. A small semantic layer of views is created on top of the copies (latest claim version, SGD amounts,
    "Unknown" attribution, de-duplicated lookups and diagnoses).
-4. External access (files, network, extensions) is disabled and the configuration is locked.
+4. Memory is capped, external access (files, network, extensions) is disabled and the configuration is
+   locked.
 
 The in-memory copy is written during steps 1-3 only. The guard in sql_guard.py keeps queries read-only after
 that; if it were ever bypassed, a write could only touch this throw-away copy.
@@ -68,13 +69,29 @@ VIEWS = [
         LEFT JOIN lookup_clean t ON t.type = 'PROVIDER_TYPE' AND t.code_key = {_code_key('g.type')}
         LEFT JOIN lookup_clean r ON r.type = 'PROVIDER_REGION' AND r.code_key = {_code_key('g.region')}""",
 
-    f"""CREATE VIEW doctor_dim AS
+    # doctor_id -> doctor_key. Doctors are people, and people share names: two doctors with the IDENTICAL name
+    # are kept apart. Two rows are merged only when the same name is typed differently ("Locum Doctor" /
+    # "Locum doctor") and the specialty matches, which is the signature of one doctor entered twice.
+    """CREATE VIEW doctor_map AS
         WITH d AS (
-            SELECT * FROM doctor
+            SELECT *, trim(regexp_replace(regexp_replace(lower(name), '[^a-z0-9 ]', '', 'g'), ' +', ' ', 'g')) AS name_key
+            FROM doctor
             QUALIFY row_number() OVER (PARTITION BY doctor_id ORDER BY name, specialty) = 1)
-        SELECT d.doctor_id, d.name AS doctor_name, d.specialty AS specialty_code,
-               coalesce(s.descr, 'Unknown') AS specialty
-        FROM d LEFT JOIN lookup_clean s ON s.type = 'SPECIALTY' AND s.code_key = {_code_key('d.specialty')}""",
+        SELECT doctor_id, name, specialty,
+               CASE WHEN name_key <> '' AND min(name) OVER w <> max(name) OVER w
+                    THEN min(doctor_id) OVER w ELSE doctor_id END AS doctor_key
+        FROM d
+        WINDOW w AS (PARTITION BY name_key, specialty)""",
+
+    # One row per real doctor, specialty decoded.
+    f"""CREATE VIEW doctor_dim AS
+        WITH g AS (
+            SELECT doctor_key, arg_min(name, doctor_id) AS name, arg_min(specialty, doctor_id) AS specialty,
+                   count(*) AS source_rows
+            FROM doctor_map GROUP BY doctor_key)
+        SELECT g.doctor_key AS doctor_id, g.name AS doctor_name, g.specialty AS specialty_code,
+               coalesce(s.descr, 'Unknown') AS specialty, g.source_rows
+        FROM g LEFT JOIN lookup_clean s ON s.type = 'SPECIALTY' AND s.code_key = {_code_key('g.specialty')}""",
 
     f"""CREATE VIEW drug_dim AS
         WITH g AS (
@@ -105,18 +122,20 @@ VIEWS = [
                CASE WHEN c.currency_rate > 0 AND isfinite(c.currency_rate)
                     THEN CAST(c.grand_total AS DOUBLE) / c.currency_rate END AS grand_total_sgd,
                c.visit_type AS visit_type_code, coalesce(vt.descr, 'Unknown') AS visit_type,
-               coalesce(pm.provider_key, c.provider_id) AS provider_id, c.provider_id AS provider_id_raw,
+               pm.provider_key AS provider_id, c.provider_id AS provider_id_raw,
                coalesce(p.provider_name, 'Unknown') AS provider_name,
                coalesce(p.provider_type, 'Unknown') AS provider_type,
                coalesce(p.country_code, 'Unknown') AS country_code,
                coalesce(p.region, 'Unknown') AS region,
-               c.doctor_id, coalesce(d.doctor_name, 'Unknown') AS doctor_name,
+               dm.doctor_key AS doctor_id, c.doctor_id AS doctor_id_raw,
+               coalesce(d.doctor_name, 'Unknown') AS doctor_name,
                coalesce(d.specialty, 'Unknown') AS specialty,
                c.loaded_at, c.version_count
         FROM ranked c
         LEFT JOIN provider_map pm ON pm.provider_id = c.provider_id
         LEFT JOIN provider_dim p ON p.provider_id = pm.provider_key
-        LEFT JOIN doctor_dim d ON d.doctor_id = TRY_CAST(c.doctor_id AS BIGINT)
+        LEFT JOIN doctor_map dm ON dm.doctor_id = TRY_CAST(c.doctor_id AS BIGINT)
+        LEFT JOIN doctor_dim d ON d.doctor_id = dm.doctor_key
         LEFT JOIN lookup_clean vt ON vt.type = 'VISIT_TYPE' AND vt.code_key = {_code_key('c.visit_type')}
         WHERE c.rn = 1""",
 
@@ -144,6 +163,7 @@ def connect(path: str) -> duckdb.DuckDBPyConnection:
         con.execute("DETACH src")
     for ddl in VIEWS:
         con.execute(ddl)
+    con.execute("SET memory_limit = '2GB'")
     con.execute("SET enable_external_access = false")
     con.execute("SET lock_configuration = true")
     return con

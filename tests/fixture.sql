@@ -17,7 +17,8 @@ INSERT INTO lookup VALUES ('PROVIDER_TYPE','001','GP'), ('PROVIDER_TYPE','001','
 -- provider 3 is provider 1 entered again with a re-typed name; provider 4 shares the name but not the country
 INSERT INTO provider VALUES (1,'A Clinic',1,'SG','C'), (2,'B Clinic',2,'MY','C'), (3,'a clinic.',1,'SG','C'),
   (4,'A Clinic',1,'MY','C');
-INSERT INTO doctor VALUES (1,'Dr X','10');
+-- doctor 2 is doctor 1 typed differently (merged); doctors 3 and 4 share an identical name (two people)
+INSERT INTO doctor VALUES (1,'Dr X','10'), (2,'dr x.','10'), (3,'Dr Y','10'), (4,'Dr Y','10');
 INSERT INTO ref_icd VALUES (1,'X001','Flu'), (2,'X002','Cough');
 INSERT INTO drug VALUES (1,'Drug-1','001');
 INSERT INTO claim VALUES
@@ -34,7 +35,7 @@ INSERT INTO claim VALUES
   -- claim 5: approved AND rejected -> still approved; 115000 IDR at 11500 -> 10 SGD
   (5,3,'1','2026-02-20','2026-02-21','2026-02-22',NULL,'IDR',11500, 115000,120000,'1','2026-02-23'),
   -- claim 6: unusable rate -> SGD amount is NULL, not zero and not infinity
-  (6,2,'1','2026-02-21','2026-02-22',NULL,NULL,        'MYR',0,     500,550,'1','2026-02-23');
+  (6,2,'2','2026-02-21','2026-02-22',NULL,NULL,        'MYR',0,     500,550,'1','2026-02-23');
 INSERT INTO claim_diagnosis VALUES (2,1,'SECRET-NOTE-ALPHA'), (2,1,'SECRET-NOTE-BETA'), (2,2,'SECRET-NOTE-GAMMA'),
   (3,9001,'SECRET-NOTE-DELTA'), (3,9002,'SECRET-NOTE-EPSILON'), (5,1,'SECRET-NOTE-ZETA');
 INSERT INTO claim_drug VALUES (2,1,2,30.00);

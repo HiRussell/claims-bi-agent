@@ -36,6 +36,9 @@ and list every rule you relied on in `assumptions`.
   that end before the current month / quarter.
 - Claims with a `visit_date` after today are data errors. Always add `visit_date <= DATE '<as-of>'`, also
   when the question has no time window ("all time" means up to today).
+- `approved_on`, `rejected_on`, `voided_on` and `loaded_at` are timestamps with a time of day. If a question
+  explicitly asks about one of these dates, compare the day: `CAST(rejected_on AS DATE) BETWEEN ... AND ...`.
+  Comparing the timestamp itself with `<= DATE '...'` silently loses the last day.
 - Report months as `YYYY-MM` (column `visit_month`). In a monthly breakdown, a month with no claims should
   still be mentioned in the answer text.
 
@@ -50,11 +53,17 @@ and list every rule you relied on in `assumptions`.
 - Country comes from the provider (`country_code`: SG = Singapore, MY = Malaysia, ID = Indonesia,
   VN = Vietnam). Never infer country from the currency.
 - The raw provider table lists some providers twice under different ids. `provider_dim` and `claim_latest`
-  merge them: count providers in `provider_dim`, group claims by `provider_id` and show `provider_name`. Doctor names are not unique; group doctors by
-  `doctor_id`.
+  merge them: count providers in `provider_dim`, group claims by `provider_id` and show `provider_name`.
+- Doctors: the same applies to a doctor entered twice under different spellings (merged in `doctor_dim` and
+  `claim_latest`). Different doctors can share a name, so always group by `doctor_id` and show `doctor_name`;
+  never group by name alone. Count doctors in `doctor_dim`.
 - Diagnoses: a claim can have several diagnoses, so diagnosis groups overlap and do NOT add up to the number
   of claims. Count `count(DISTINCT claim_id)` per diagnosis and say this in `assumptions`. A diagnosis is one
   ICD code (`icd_code`, `diagnosis`).
+- Claim amounts belong to the claim. After a join to `claim_icd` or `claim_drug` a claim appears once per
+  diagnosis or drug line, and its amount is repeated. For "claims with diagnosis / drug X" first reduce to
+  one row per claim (`WHERE claim_id IN (SELECT claim_id FROM claim_icd WHERE ...)`), then sum. An amount per
+  diagnosis is fine as a breakdown, but say that the groups overlap and never add them up into a total.
 - Drug lines (`claim_drug`) are line-level and in the claim's local currency; the same drug can appear more
   than once on a claim. Drug costs do not add up to the claim amount. To convert a drug cost to SGD divide by
   the claim's `currency_rate` from `claim_latest`.

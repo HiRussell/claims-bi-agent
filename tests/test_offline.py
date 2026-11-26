@@ -73,6 +73,18 @@ class SemanticLayer(unittest.TestCase):
         self.assertEqual(rows("SELECT provider_id, provider_id_raw, provider_name, country_code FROM claim_latest "
                               "WHERE claim_id = 5"), [[1, 3, "A Clinic", "SG"]])
 
+    def test_doctor_typed_twice_is_merged_but_namesakes_are_not(self):
+        self.assertEqual(rows("SELECT doctor_id, doctor_name, source_rows FROM doctor_dim ORDER BY 1"),
+                         [[1, "Dr X", 2], [3, "Dr Y", 1], [4, "Dr Y", 1]])
+        # claim 6 is booked on doctor 2 (the re-typed row) -> reported under doctor 1; claim 3 has no doctor
+        self.assertEqual(rows("SELECT claim_id, doctor_id, doctor_id_raw, doctor_name FROM claim_latest "
+                              "WHERE claim_id IN (3, 6) ORDER BY 1"),
+                         [[3, None, "0", "Unknown"], [6, 1, "2", "Dr X"]])
+
+    def test_unknown_provider_is_one_group(self):
+        self.assertEqual(rows("SELECT provider_id, provider_name FROM claim_latest WHERE claim_id = 3"),
+                         [[None, "Unknown"]])
+
     def test_diagnoses_deduplicated_and_unknown(self):
         self.assertEqual(rows("SELECT claim_id, icd_id, diagnosis FROM claim_icd ORDER BY 1, 2"),
                          [[2, 1, "Flu"], [2, 2, "Cough"], [3, 9001, "Unknown"], [3, 9002, "Unknown"], [5, 1, "Flu"]])
@@ -100,6 +112,35 @@ class Guard(unittest.TestCase):
             with self.subTest(sql=sql):
                 with self.assertRaises(Exception):
                     sql_tool.execute_sql(sql)
+
+    def test_invisible_characters_are_refused(self):
+        # DuckDB reads these as white space, the guard's parser reads them as part of a name.
+        import sql_tool
+        for ch in ("\u200b", "\ufeff", "\u2060", "\u00a0", "\u3000", "\u000b"):
+            with self.subTest(char=hex(ord(ch))):
+                with self.assertRaises(Exception) as ctx:
+                    sql_tool.execute_sql(f"SELECT view_name{ch}FROM{ch}duckdb_views")
+                self.assertIn("Refused", str(ctx.exception))
+        self.assertEqual(rows("SELECT 'Café' AS name"), [["Café"]])            # ordinary non-ASCII text is fine
+
+    def test_errors_do_not_quote_data(self):
+        import sql_tool
+        with self.assertRaises(Exception) as ctx:
+            sql_tool.execute_sql("SELECT CAST(provider_name AS INTEGER) FROM claim_latest WHERE claim_id = 2")
+        self.assertNotIn("B Clinic", str(ctx.exception))
+        with self.assertRaises(Exception) as ctx:                                  # schema errors stay helpful
+            sql_tool.execute_sql("SELECT no_such_column FROM claim_latest")
+        self.assertIn("no_such_column", str(ctx.exception))
+
+    def test_result_size_is_bounded(self):
+        import sql_tool
+        res = sql_tool.execute_sql("SELECT repeat('y', 100000) AS big FROM range(5000)")
+        self.assertTrue(res["truncated"])
+        self.assertLess(len(json.dumps(res)), 3_000_000)
+        self.assertLessEqual(max(len(r[0]) for r in res["rows"]), sql_tool.MAX_CELL_CHARS + 20)
+        res = sql_tool.execute_sql("SELECT list(i) AS xs FROM range(100000) t(i)")
+        self.assertTrue(res["truncated"])
+        self.assertLessEqual(len(res["rows"][0][0]), sql_tool.MAX_LIST_ITEMS)
 
     def test_notes_never_come_back(self):
         # SELECT * on the table that holds the notes works, but the note column does not exist here.
@@ -138,6 +179,70 @@ class DateWindows(unittest.TestCase):
         self.assertEqual(w["last_3_months"], {"from": "2026-10-01", "to": "2026-12-31"})
 
 
+class ModelSettings(unittest.TestCase):
+    """A grader may supply nothing but an API key; every other setting must have a working default."""
+
+    KEYS = ("LLM_API_KEY", "OPENAI_API_KEY", "LLM_BASE_URL", "OPENAI_BASE_URL", "LLM_MODEL", "LLM_API_STYLE",
+            "LLM_REASONING_EFFORT", "LLM_TEMPERATURE")
+
+    def client(self, **env):
+        import llm
+        saved = {k: os.environ.pop(k, None) for k in self.KEYS}
+        loader, llm.load_env_file = llm.load_env_file, lambda *a, **k: None       # ignore a developer's .env
+        os.environ.update(env)
+        try:
+            return llm.ChatClient()
+        finally:
+            llm.load_env_file = loader
+            for k in self.KEYS:
+                os.environ.pop(k, None)
+                if saved[k] is not None:
+                    os.environ[k] = saved[k]
+
+    def test_only_the_standard_openai_key(self):
+        c = self.client(OPENAI_API_KEY="test-key")
+        self.assertEqual((c.api_key, c.model, c.style, c.effort, c.base_url),
+                         ("test-key", "gpt-6-luna", "responses", "low", "https://api.openai.com/v1"))
+
+    def test_chat_style_on_openai_switches_reasoning_off(self):
+        c = self.client(LLM_API_KEY="test-key", LLM_MODEL="gpt-6-luna", LLM_API_STYLE="chat")
+        self.assertEqual((c.style, c.effort), ("chat", "none"))
+
+    def test_local_server_defaults_to_chat_without_key(self):
+        c = self.client(LLM_BASE_URL="http://localhost:11434/v1", LLM_MODEL="some-local-model")
+        self.assertEqual((c.style, c.effort, c.api_key), ("chat", "", ""))
+
+    def test_missing_key_is_reported_clearly(self):
+        import llm
+        with self.assertRaises(llm.LLMError) as ctx:
+            self.client()
+        self.assertIn("API key", str(ctx.exception))
+
+
+class AnswerNumbers(unittest.TestCase):
+    def test_numbers_in_the_text_must_be_in_the_tables(self):
+        import agent
+        t = [{"columns": ["type", "n", "avg"], "rows": [["GP", 8497, 81.7], ["Specialist", 2177, 83.59]]}]
+        f = agent.numbers_not_in_tables
+        self.assertEqual(f("GP 81.70 (8,497 claims), Specialist 83.59; a gap of 1.89.", t), ["1.89"])
+        self.assertEqual(f("GP 81.7 and Specialist 83.6 as of 2026-11-30, top 10, about 8.5k claims.", t), [])
+        self.assertEqual(f("About 22.3% of 1.3 million.", [{"columns": ["a", "b"], "rows": [[0.2233, 1317371.62]]}]), [])
+
+    def test_loop_asks_once_then_accepts_with_a_note(self):
+        import agent
+        sql = "SELECT count(*) AS approved_claims FROM claim_latest WHERE is_approved AND visit_date <= DATE '2026-03-15'"
+        final = {"status": "answered", "answer": "There were 4 approved claims, 57 more than last year.",
+                 "assumptions": ["Approved claims, latest version."], "query_ids": ["q1"]}
+        out = agent.answer_question("How many approved claims?", "2026-03-15", client=Scripted([
+            ("run_sql", {"sql": sql}), ("final_answer", final), ("final_answer", final)]))
+        self.assertEqual(out["status"], "answered")
+        self.assertIn("57", out["assumptions"][-1])                    # accepted the second time, flagged openly
+        fixed = dict(final, answer="There were 4 approved claims.")
+        out = agent.answer_question("How many approved claims?", "2026-03-15", client=Scripted([
+            ("run_sql", {"sql": sql}), ("final_answer", final), ("final_answer", fixed)]))
+        self.assertEqual(out["assumptions"], ["Approved claims, latest version."])
+
+
 class Scripted:
     """Stands in for the model: replays a fixed list of tool calls. Tests the plumbing only."""
 
@@ -166,9 +271,11 @@ class Loop(unittest.TestCase):
         self.assertEqual(out["status"], "answered")
         self.assertEqual(out["tables"], [{"columns": ["approved_claims"], "rows": [[4]]}])
         self.assertEqual(out["sql"], [sql])
-        events = [json.loads(line) for line in open(TRACE)]
+        with open(TRACE) as f:
+            trace_text = f.read()
+        events = [json.loads(line) for line in trace_text.splitlines()]
         self.assertEqual([e["type"] for e in events], ["tool_call", "tool_result"] * 5)
-        self.assertNotIn("SECRET-NOTE", open(TRACE).read())
+        self.assertNotIn("SECRET-NOTE", trace_text)
 
     def test_declined_has_no_tables(self):
         import agent
@@ -184,8 +291,10 @@ class ResponsesWireFormat(unittest.TestCase):
     def test_reasoning_items_and_tool_results_are_replayed_in_order(self):
         import agent
         import llm
-        saved = {k: os.environ.get(k) for k in ("LLM_MODEL", "LLM_API_STYLE", "LLM_REASONING_EFFORT", "LLM_TEMPERATURE")}
-        os.environ.update(LLM_MODEL="test-model", LLM_API_STYLE="responses", LLM_REASONING_EFFORT="low", LLM_TEMPERATURE="")
+        saved = {k: os.environ.get(k) for k in ("LLM_API_KEY", "LLM_MODEL", "LLM_API_STYLE", "LLM_REASONING_EFFORT",
+                                                "LLM_TEMPERATURE")}
+        os.environ.update(LLM_API_KEY="test-key", LLM_MODEL="test-model", LLM_API_STYLE="responses",
+                          LLM_REASONING_EFFORT="low", LLM_TEMPERATURE="")
         try:
             client = llm.ChatClient()
         finally:

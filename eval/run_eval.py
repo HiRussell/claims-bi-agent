@@ -12,10 +12,16 @@ A case passes when the status matches and every expected row is found in one of 
 extra columns and extra rows such as an 'Unknown' group are allowed). No model is used as a judge.
 Every output is also scanned for diagnosis-note text; a leak fails the case.
 
+What the judge does NOT check: the wording of the answer, whether the assumptions are the right ones, and
+(except where "max_rows" is set) rows beyond the expected ones. For the 10 cases whose right reply is
+declined / unanswerable / clarify it checks the status and that no figure is returned, nothing more.
+
 Case options in cases.json:
   "status": "answered" or a list such as ["answered", "clarify"] when the conventions allow either;
             if the agent answers, the figures are still checked.
   "percent": true    the expected figure is a percentage; 71.95, 71.9 and 0.7195 are all accepted.
+  "max_rows": N      for a top-N question: the agent may not return more than N rows in total
+                     (N = the ranking plus one optional row for the 'Unknown' group).
   "db": "fixture"    run on the tiny second database built from tests/fixture.sql instead of --db
                      (different data, different as-of date, answers that can be checked by hand).
 """
@@ -89,6 +95,8 @@ def judge(case, out, expected_rows, notes) -> str:
     if not out.get("sql") or not out.get("assumptions"):
         return "answered without sql or assumptions"
     all_rows = [r for t in out.get("tables", []) for r in t.get("rows", [])]
+    if case.get("max_rows") and len(all_rows) > case["max_rows"]:
+        return f"{len(all_rows)} rows returned, at most {case['max_rows']} allowed for this ranking"
     missing = [r for r in expected_rows if not row_found(r, all_rows, case.get("percent", False))]
     if missing:
         return f"{len(missing)} of {len(expected_rows)} expected rows not in tables, e.g. {missing[0]}"
@@ -164,9 +172,12 @@ def main():
     if not a.only:                                  # a partial run never overwrites the reported summary
         json.dump(summary, open(os.path.join(ROOT, "eval_summary.json"), "w"))
     sys.path.insert(0, ROOT)
-    from llm import load_env_file
-    load_env_file()                                 # only to record which model produced this run
-    setup = {k: os.environ.get(k, "") for k in ("LLM_MODEL", "LLM_API_STYLE", "LLM_REASONING_EFFORT")}
+    from llm import ChatClient
+    try:                                            # the settings in effect (defaults included), for the record
+        client = ChatClient()
+        setup = {"model": client.model, "api_style": client.style, "reasoning_effort": client.effort}
+    except Exception as e:
+        setup = {"error": str(e)}
     json.dump({"model": setup, "summary": summary,
                "tokens": {"input": tokens_in, "output": tokens_out}, "cases": details},
               open(os.path.join(HERE, "last_run.json"), "w"), indent=1, default=str)

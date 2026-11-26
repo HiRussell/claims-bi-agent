@@ -7,6 +7,7 @@ SQL statement is copied from a query that really ran (the model cannot retype nu
 import datetime as dt
 import json
 import os
+import re
 import time
 
 import sql_tool
@@ -59,7 +60,8 @@ How to work:
 4. Call final_answer once. The user sees exactly the result tables of the queries in query_ids, so the final
    query (or queries) must return precisely the figures you report: clear column names, amounts rounded with
    round(x, 2), a sensible ORDER BY, and LIMIT for a top-N. Do not list exploratory queries in query_ids.
-5. Every number in `answer` must appear in one of those tables. Never state a number you did not query.
+5. Every number in `answer` must appear in one of those tables (this is checked). Never state a number you
+   did not query: a total, a difference or a percentage needs its own column or query.
 6. `assumptions` lists every rule or interpretation the figures rely on (approved only, latest version,
    SGD conversion, the exact date window, how Unknown was handled, ...).
 
@@ -116,13 +118,14 @@ RELATION_NOTES = {
     "claim_icd": "One row per (claim, diagnosis), repeats removed. Overlapping groups: a claim can have several "
                  "diagnoses, so count(DISTINCT claim_id) per diagnosis.",
     "provider_dim": "One row per real provider (duplicate provider rows merged), codes decoded. Count providers here.",
-    "doctor_dim": "One row per doctor, specialty decoded. Doctor names are not unique.",
+    "doctor_dim": "One row per real doctor (a doctor entered twice under different spellings is merged), "
+                  "specialty decoded. Different doctors can share a name: always group by doctor_id.",
     "drug_dim": "One row per drug, type decoded.",
     "claim_drug": "Raw drug lines per claim (line-level cost in the claim's local currency).",
     "claim": "RAW claim versions (several rows per claim_id). Only for version / load-history questions.",
     "claim_diagnosis": "Raw claim-to-ICD links (repeated pairs exist). Prefer claim_icd.",
     "provider": "Raw provider table; contains duplicate rows for the same provider. Prefer provider_dim.",
-    "doctor": "Raw doctor table. Prefer doctor_dim.",
+    "doctor": "Raw doctor table; can list one doctor twice. Prefer doctor_dim.",
     "drug": "Raw drug table. Prefer drug_dim.",
     "ref_icd": "Raw ICD reference.",
     "lookup": "Raw code lookup with repeated rows. Do not join it; use the decoded columns instead.",
@@ -140,7 +143,11 @@ COLUMN_NOTES = {
         "grand_total": "gross amount incl. tax, local currency",
         "grand_total_sgd": "gross amount in SGD",
         "currency_rate": "units of local currency per 1 SGD",
-        "provider_id": "id of the real provider after merging duplicate provider rows; group providers by this",
+        "provider_id": "id of the real provider after merging duplicate provider rows; group providers by this. "
+                       "NULL when the claim's provider is not in the provider table",
+        "doctor_id": "id of the real doctor after merging duplicate doctor rows; group doctors by this. "
+                     "NULL when the claim has no known doctor",
+        "doctor_id_raw": "doctor_id as stored on the claim (text; '' and '0' mean no doctor)",
         "provider_id_raw": "provider_id as stored on the claim",
         "country_code": "provider's country (ISO 2 letters) or 'Unknown'",
         "specialty": "doctor's specialty or 'Unknown'",
@@ -148,6 +155,7 @@ COLUMN_NOTES = {
         "loaded_at": "load time of this (latest) version",
     },
     "provider_dim": {"source_rows": "how many raw provider rows were merged into this provider"},
+    "doctor_dim": {"source_rows": "how many raw doctor rows were merged into this doctor"},
     "claim_icd": {"icd_id": "ICD id as stored on the claim", "icd_code": "ICD code, or 'Unknown' when the id is not in ref_icd",
                   "diagnosis": "ICD description or 'Unknown'"},
     "claim_drug": {"cost": "line-level cost, local currency of the claim", "qty": "quantity on the line"},
@@ -191,6 +199,7 @@ def build_catalogue(as_of: dt.date) -> dict:
     loaded_after = one(f"SELECT count(*) FROM claim_latest WHERE loaded_at >= DATE '{day}' + INTERVAL 1 DAY")[0]
     multi_dx = one("SELECT count(*) FROM (SELECT claim_id FROM claim_icd GROUP BY 1 HAVING count(*) > 1)")[0]
     provider_rows, providers = one("SELECT sum(source_rows), count(*) FROM provider_dim")
+    doctor_rows, doctors = one("SELECT sum(source_rows), count(*) FROM doctor_dim")
     lookup_conflicts = one("SELECT count(*) FROM lookup_clean WHERE descr_variants > 1")[0]
 
     facts = [
@@ -208,6 +217,11 @@ def build_catalogue(as_of: dt.date) -> dict:
                      "rows repeat an existing provider under another id with a re-typed name (same type, country, "
                      "region). provider_dim and claim_latest merge them; say so in assumptions when you count or "
                      "rank providers.")
+    if doctor_rows != doctors:
+        facts.append(f"doctor has {doctor_rows} rows but {doctors} real doctors: {doctor_rows - doctors} rows repeat "
+                     "an existing doctor under another id with the name typed differently (same specialty). "
+                     "doctor_dim and claim_latest merge them; say so in assumptions when you count or rank doctors. "
+                     "Doctors with an identical name are different people and are NOT merged.")
     if no_fx:
         facts.append(f"WARNING: {no_fx} claims have an unusable currency_rate, so claim_amt_sgd is NULL for them. "
                      "Report how many claims are missing from any SGD total.")
@@ -220,6 +234,55 @@ def build_catalogue(as_of: dt.date) -> dict:
     if lookup_conflicts:
         facts.append(f"WARNING: {lookup_conflicts} lookup codes have conflicting descriptions; the first is used.")
     return {"as_of": day, "relations": relations, "values_of_coded_columns": values, "data_facts": facts}
+
+
+# --------------------------------------------------------------------------------------------------------
+# Figures quoted in the answer text must come from the result tables
+# --------------------------------------------------------------------------------------------------------
+_NUMBER = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*(%|k\b|thousand\b|million\b|m\b|billion\b|bn\b)?",
+                     re.IGNORECASE)
+_SCALE = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "bn": 1e9, "billion": 1e9}
+
+
+def numbers_not_in_tables(answer: str, tables: list, context: str = "") -> list:
+    """Numbers written in `answer` that match no cell of `tables`.
+
+    Not counted: dates, months, years, whole numbers up to 31 (days, top-N, counts of rows), and numbers
+    that already appear in `context` (the question and the as-of date). A number matches a cell when it is
+    that cell rounded to the precision written ("83.6" matches 83.59, "1.3 million" matches 1,317,371.62);
+    a percentage also matches the fraction form of the cell.
+    """
+    cells, quoted = [], set()
+    for table in tables:
+        for row in table.get("rows", []):
+            for v in row:
+                if isinstance(v, bool):
+                    continue
+                if isinstance(v, (int, float)):
+                    cells.append(float(v))
+                elif isinstance(v, str):                 # names such as "Orchid Family Clinic 396" or "X001"
+                    quoted.update(float(n) for n in re.findall(r"\d+(?:\.\d+)?", v))
+    quoted.update(float(n.replace(",", "")) for n in re.findall(r"\d[\d,]*(?:\.\d+)?", context))
+
+    def strip_dates(text):
+        text = re.sub(r"\b\d{4}-\d{2}(?:-\d{2})?\b", " ", text)
+        return re.sub(r"\b(?:19|20)\d{2}\b", " ", text)
+
+    loose = []
+    for m in _NUMBER.finditer(strip_dates(answer)):
+        whole, frac, unit = m.group(1).replace(",", ""), m.group(2) or "", (m.group(3) or "").lower()
+        value = float(whole + frac)
+        scale = _SCALE.get(unit, 1.0)
+        if unit in ("", "%") and not frac and value <= 31:
+            continue
+        if value in quoted:
+            continue
+        tolerance = 0.5 * 10 ** -(len(frac) - 1 if frac else 0) * scale + 1e-9
+        targets = [value * scale] + ([value / 100] if unit == "%" else [])
+        tolerances = [tolerance] + ([tolerance / 100] if unit == "%" else [])
+        if not any(abs(abs(c) - t) <= tol for c in cells for t, tol in zip(targets, tolerances)):
+            loose.append(m.group(0).strip())
+    return list(dict.fromkeys(loose))
 
 
 # --------------------------------------------------------------------------------------------------------
@@ -237,10 +300,12 @@ def _failure(reason: str) -> dict:
 class Session:
     """State of one question: the queries that actually ran, and the tool implementations."""
 
-    def __init__(self, as_of: dt.date):
+    def __init__(self, as_of: dt.date, question: str = ""):
         self.as_of = as_of
+        self.question = question
         self.queries = {}          # query_id -> {"sql", "columns", "rows", "truncated"}
         self.final = None
+        self.asked_to_fix_numbers = False
 
     def call(self, name: str, args: dict):
         if name == "get_catalogue":
@@ -294,8 +359,18 @@ class Session:
         if too_big:
             return {"error": f"Result of {too_big} is too large to report; aggregate it or add a LIMIT."}
         chosen = [self.queries[q] for q in dict.fromkeys(query_ids)]
-        self.final = _result("answered", answer.strip(),
-                             tables=[{"columns": q["columns"], "rows": q["rows"]} for q in chosen],
+        tables = [{"columns": q["columns"], "rows": q["rows"]} for q in chosen]
+        loose = numbers_not_in_tables(answer, tables, f"{self.question} {self.as_of.isoformat()}")
+        if loose and not self.asked_to_fix_numbers:           # one chance to repair, so this can never loop
+            self.asked_to_fix_numbers = True
+            return {"error": f"These numbers in `answer` are not in the result tables you listed: {loose}. Every "
+                             "figure must come from a query. Add it to a query (for example a total, a difference "
+                             "or a percentage as an extra column) and list that query, or remove it from the "
+                             "text. Then call final_answer again."}
+        if loose:                                             # still there: accept, but say so openly
+            assumptions.append(f"Figures in the answer text that are not taken from the result tables: "
+                               f"{', '.join(loose)}.")
+        self.final = _result("answered", answer.strip(), tables=tables,
                              sql=[q["sql"] for q in chosen], assumptions=assumptions)
         return {"ok": True}
 
@@ -312,7 +387,7 @@ def answer_question(question: str, as_of: str, client=None) -> dict:
             client = ChatClient()
         except LLMError as e:
             return _failure(str(e))
-    session = Session(today)
+    session = Session(today, question)
     messages = [{"role": "system", "content": system_prompt(today)},
                 {"role": "user", "content": question}]
     nudges = 0
