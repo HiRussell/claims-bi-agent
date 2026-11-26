@@ -206,7 +206,7 @@ class ModelSettings(unittest.TestCase):
     def test_only_the_standard_openai_key(self):
         c = self.client(OPENAI_API_KEY="test-key")
         self.assertEqual((c.api_key, c.model, c.style, c.effort, c.base_url),
-                         ("test-key", "gpt-6-luna", "responses", "medium", "https://api.openai.com/v1"))
+                         ("test-key", "gpt-6-luna", "responses", "low", "https://api.openai.com/v1"))
 
     def test_chat_style_on_openai_switches_reasoning_off(self):
         c = self.client(LLM_API_KEY="test-key", LLM_MODEL="gpt-6-luna", LLM_API_STYLE="chat")

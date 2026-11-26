@@ -65,15 +65,15 @@ from the views; three use a second, 6-claim database with another as-of date. In
   it** were added: **35 of 42.** Two misses were the questions' fault. The real ones: wrong logic across
   claim versions (27.86 % reported as 18.20 %), "last 2 quarters" read as six months, `Unknown` dropped from
   a per-country figure, 02:00 on day 3 counted as "more than 3 days".
-- The cause was mostly reasoning effort: a repeat at `low` gave 37 with different misses, `medium` 39 (its
-  three misses were under-specified questions), `high` ran out of time. So the default became `medium`,
-  quarter windows are computed in code, rules were added, six questions were reworded. Eight fresh
-  questions written before those changes: 8 of 8.
-- All 98 at `medium`, twice: **96 and 97**, different misses: three doctors sharing a name added into one
-  figure; `Unknown` counted as a provider (side effect of a new rule, then corrected); one needless question.
-- Reported run (`eval_summary.json`): **97 of 98.** "How much did we pay out last month?" was called
-  unanswerable (no payment records) though approved claims are the ones paid: the price of the "no
-  substitutes" rule. Three runs, three different misses.
+- Reasoning effort was tested as a cause: a repeat at `low` gave 37 with different misses, `medium` 39 (its
+  three misses were under-specified questions), `high` ran out of time. The default stays `low` on purpose
+  (the weakest setting); instead quarter windows are computed in code, rules were added and six questions
+  reworded. Eight fresh questions written before those changes: 8 of 8.
+- All 98, five full runs: `medium` 96, 97, 97; `low` 96, 97. The misses differ every time. At `low` they are
+  logic errors on multi-step questions (the 18.20 % again; "first loaded more than 3 days after" tested on
+  any load; diagnoses per claim 1.00 instead of 1.45); at `medium`, mostly judgement: namesake doctors added
+  together, a needless clarifying question, one over-cautious "unanswerable".
+- Reported run (`eval_summary.json`, at `low`): **96 of 98.**
 
 **This is an upper bound.** Questions and semantic layer have the same author, and the expected SQL shares
 one reading of the open points below; where the data owner reads them differently the agent is consistently
@@ -97,12 +97,14 @@ version history, where the agent still reasons unaided; the allow-list taken fro
 
 ## Models and AI usage
 
-**Model that powers the agent:** OpenAI `gpt-6-luna`, the small low-cost tier, chosen because the brief
-says a cheap model should be enough and the semantic layer is meant to carry the hard parts. Reasoning
-effort is `medium`, chosen on the evaluation: `low` is about 2 seconds faster per question but made logic
-errors on multi-step questions and gave different results on a repeat, and `high` ran past the time limit.
-A full 98-question run uses about 1.4 million input and 38 thousand output tokens (roughly USD 0.16 at
-list price) and takes 3 to 13 seconds per question, 6 on average.
+**Model that powers the agent:** OpenAI `gpt-6-luna`, the small low-cost tier, at reasoning effort `low`:
+deliberately the weakest setting, because the brief says a cheap model should be enough and the semantic
+layer is meant to carry the hard parts. `medium` was measured too: it costs about the same (input tokens
+dominate), is about a second slower per question and scored the same on the full set, but its misses were
+judgement calls where `low` makes logic errors on multi-step questions; `high` ran past the time limit.
+`LLM_REASONING_EFFORT=medium` is the one-line switch. A full 98-question run at `low` uses about 1.4 million
+input and 25 thousand output tokens (roughly USD 0.15 at list price), 3 to 10 seconds per question, 5 on
+average.
 
 **How it is used:** one tool-calling loop over the OpenAI Responses API (stateless, `store: false`; the
 model's reasoning items are replayed between steps). The Responses API is used because, for this model,

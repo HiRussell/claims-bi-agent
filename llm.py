@@ -60,7 +60,7 @@ class ChatClient:
         if "LLM_REASONING_EFFORT" in os.environ:            # set explicitly; empty means "the model's default"
             self.effort = os.environ["LLM_REASONING_EFFORT"].strip().lower()
         elif is_openai:                                     # OpenAI chat completions accepts function tools
-            self.effort = "medium" if self.style == "responses" else "none"   # only with reasoning switched off
+            self.effort = "low" if self.style == "responses" else "none"      # only with reasoning switched off
         else:
             self.effort = ""
         temperature = setting("LLM_TEMPERATURE")
