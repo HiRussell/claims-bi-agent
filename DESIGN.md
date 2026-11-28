@@ -28,28 +28,28 @@ One loop: the model picks the next tool every turn until it calls `final_answer`
 | Amounts in SGD, MYR, IDR; Vietnamese providers bill in SGD | Summing `claim_amt` across currencies; country inferred from currency | `claim_amt_sgd` (amount / rate); country from the provider |
 | 22,388 claims with provider id 0 / 90xx and doctor id `''` / `'0'` | An inner join drops 37 % of claims | Left joins, `'Unknown'` group kept |
 | 12 providers and 1 doctor entered twice | "412 providers"; one clinic on two rows of a top 10 | Merged only when the other attributes match; namesake doctors stay apart |
+| `lookup` rows repeated; `provider.type` is `1`, the code is `'001'` | Doubled counts, or no match | `lookup_clean`, numeric code key |
 | 4,048 repeated claim-diagnosis pairs; 1,350 rows with unknown ICD ids | Double counting, dropped claims | `claim_icd`; count distinct claims, groups overlap |
 | Timestamps are at 02:00; amounts repeat per diagnosis after a join | A day lost (1,222 vs 1,240); 5.16 M instead of 3.53 M | Rules: compare the day; one row per claim first |
 
 ## Safety
 
-Three layers, strongest first, none a prompt instruction; `run_sql.py` and the agent share `execute_sql`.
-(1) **The sensitive text is never loaded**: each call copies the tables from `CLAIMS_DB` (attached
-read-only) into a private in-memory database without `diagnosis_note`, then detaches the file.
+Three layers, strongest first, none in the prompt; `run_sql.py` and the agent share `execute_sql`.
+(1) **The sensitive text is never loaded**: each call copies the tables from `CLAIMS_DB` (read-only)
+into a private in-memory database without `diagnosis_note`, then detaches it.
 (2) **Engine settings**: external access off, memory capped, configuration locked. (3) **Parser guard**
-(sqlglot AST): one SELECT, allow-listed relations, no `diagnosis_note`; DuckDB's own parser must agree.
+(sqlglot AST): one SELECT, allow-listed relations, no `diagnosis_note`; DuckDB's parser must agree.
 
 A red-team pass by a second AI session got past layer 3 once (zero-width characters); layers 1 and 2
-held. That gap is closed and results are capped (10,000 rows, 2 MB, 20 seconds). In production I would
-enforce this in the database (read-only role, governed views, timeout).
+held. That gap is closed; results are capped (10,000 rows, 2 MB, 20 s). In production I would enforce
+this in the database: read-only role, governed views, timeout.
 
 ## Evaluation: what was measured, and what it does not show
 
 98 questions: 83 with a figure, 15 where the right reply is declined / unanswerable / clarify. Expected
 answers are hand-written SQL on the raw tables. First-contact results, in order:
 
-- 34 questions, **33 of 34**; one rule and 14 questions later, 48 of 48, which says more about the
-  questions than the agent.
+- 34 questions, **33 of 34**; one rule and 14 questions later, 48 of 48 (too easy).
 - So **42 questions meant to break it** were added: **35 of 42.** Two misses were the questions' fault; the
   rest were real (a share across claim versions: 18.20 % instead of 27.86 %). In response quarter windows are
   computed in code, rules were added and six questions reworded; eight fresh questions written before
@@ -57,9 +57,8 @@ answers are hand-written SQL on the raw tables. First-contact results, in order:
 - All 98, five full runs: `medium` 96, 97, 97; `low` 96, 97, with different misses every time. Reported
   run (`eval_summary.json`, at `low`): **96 of 98.**
 
-**This is an upper bound.** Questions and semantic layer have the same author, and the expected SQL shares
-one reading of the open points below; where the data owner reads them differently, this evaluation cannot
-show it.
+**This is an upper bound.** Questions, semantic layer and expected SQL have one author and one reading of
+the open points below; a different reading by the data owner would not show here.
 
 ## What I would ask the data owner, and what I assumed
 
