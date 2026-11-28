@@ -8,7 +8,7 @@ One loop: the model picks the next tool every turn until it calls `final_answer`
 |---|---|---|
 | `get_catalogue` | Relations, columns, coded values and data-quality facts **measured on the current database**. | Nothing about the data is in the prompt, so a second database is described correctly. |
 | `run_sql` | Runs one guarded SELECT, returns rows and a `query_id`. | The only way to obtain a figure. |
-| `final_answer` | Status, answer text, assumptions, `query_id`s. | `tables` and `sql` are **copied by code from the queries that ran**. Sent back: no query, no assumptions, a number in no table (once). |
+| `final_answer` | Status, answer text, assumptions, `query_id`s. | `tables` and `sql` are **copied by code from the queries that ran**. No query, no assumptions, or a number in no table: sent back. |
 
 ## How the agent learns the business rules
 
@@ -49,7 +49,7 @@ this in the database: read-only role, governed views, timeout.
 98 questions: 83 with a figure, 15 where the right reply is declined / unanswerable / clarify. Expected
 answers are hand-written SQL on the raw tables. First-contact results, in order:
 
-- 34 questions, **33 of 34**; one rule and 14 questions later, 48 of 48 (too easy).
+- 34 questions, **33 of 34**; one rule and 14 questions later, 48 of 48.
 - So **42 questions meant to break it** were added: **35 of 42.** Two misses were the questions' fault; the
   rest were real (a share across claim versions: 18.20 % instead of 27.86 %). In response quarter windows are
   computed in code, rules were added and six questions reworded; eight fresh questions written before
