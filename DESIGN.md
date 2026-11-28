@@ -8,7 +8,7 @@ One loop: the model picks the next tool every turn until it calls `final_answer`
 |---|---|---|
 | `get_catalogue` | Relations, columns, coded values and data-quality facts **measured on the current database**. | Nothing about the data is in the prompt, so a second database is described correctly. |
 | `run_sql` | Runs one guarded SELECT, returns rows and a `query_id`. | The only way to obtain a figure. |
-| `final_answer` | Status, answer text, assumptions, `query_id`s. | `tables` and `sql` are **copied by code from the queries that ran**. No query or no assumptions: sent back. |
+| `final_answer` | Status, answer text, assumptions, `query_id`s. | `tables` and `sql` are **copied by code from the queries that ran**. Sent back: no query, no assumptions, a number in no table (once). |
 
 ## How the agent learns the business rules
 
